@@ -1,0 +1,56 @@
+{
+  "name": "aksara-writer",
+  "version": "0.1.0",
+  "description": "Modern markdown-to-document converter for Indonesian businesses",
+  "type": "module",
+  "scripts": {
+    "build": "echo 'Using Bun direct TypeScript execution - no build needed'",
+    "demo": "bun run quick-test.js",
+    "test-full": "bun run test-conversion.js",
+    "cli": "bun run packages/cli/src/index.ts",
+    "cli:init": "bun run packages/cli/src/index.ts init",
+    "cli:convert": "bun run packages/cli/src/index.ts convert",
+    "cli:templates": "bun run packages/cli/src/index.ts templates",
+    "cli:themes": "bun run packages/cli/src/index.ts themes"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^12.0.0",
+    "ora": "^8.0.1",
+    "pptxgenjs": "^4.0.1",
+    "puppeteer": "^21.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "prettier": "^3.2.5",
+    "typescript": "^5.3.3",
+    "vite": "^5.1.0"
+  },
+  "keywords": [
+    "markdown",
+    "pdf",
+    "pptx",
+    "html",
+    "converter",
+    "indonesian",
+    "business",
+    "vscode",
+    "aksara"
+  ],
+  "author": "Ak'sara Initiative",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ak-sara/aksara-writer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ak-sara/aksara-writer/issues"
+  },
+  "homepage": "https://aksara-writer.dev"
+}

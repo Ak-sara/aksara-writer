@@ -1,0 +1,119 @@
+{
+  "name": "aksara-writer-vscode",
+  "displayName": "Aksara Writer",
+  "description": "Modern markdown converter with Indonesian business templates",
+  "version": "0.1.0",
+  "publisher": "aksara-initiative",
+  "icon": "aksara.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ak-sara/aksara-writer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ak-sara/aksara-writer/issues"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Formatters",
+    "Language Packs"
+  ],
+  "keywords": [
+    "markdown",
+    "pdf",
+    "pptx",
+    "html",
+    "indonesian",
+    "business",
+    "converter"
+  ],
+  "activationEvents": [
+    "onLanguage:markdown"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "aksara.showMenu",
+        "title": "Aksara Writer",
+        "icon": {
+          "light": "./aksara.png",
+          "dark": "./aksara.png"
+        }
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "aksara.showMenu",
+          "when": "resourceLangId == markdown",
+          "group": "navigation"
+        }
+      ]
+    },
+    "markdown.markdownItPlugins": true,
+    "markdown.previewScripts": [
+      "./dist/preview.js"
+    ],
+    "configuration": {
+      "title": "Aksara Writer",
+      "properties": {
+        "aksara.defaultLocale": {
+          "type": "string",
+          "enum": ["id", "en"],
+          "default": "id",
+          "description": "Default document locale"
+        },
+        "aksara.defaultTheme": {
+          "type": "string",
+          "enum": ["default", "minimal", "corporate", "government"],
+          "default": "default",
+          "description": "Default document theme"
+        },
+        "aksara.defaultPageSize": {
+          "type": "string",
+          "enum": ["A4", "Letter", "Legal"],
+          "default": "A4",
+          "description": "Default page size"
+        },
+        "aksara.previewPort": {
+          "type": "number",
+          "default": 3000,
+          "description": "Port for preview server"
+        },
+        "aksara.autoPreview": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically show preview when opening markdown files"
+        }
+      }
+    },
+    "languages": [
+      {
+        "id": "aksara-markdown",
+        "aliases": ["Aksara Markdown", "aksara-md"],
+        "extensions": [".aksara.md", ".aks.md"],
+        "configuration": "./language-configuration.json"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "tsc && webpack --mode production",
+    "dev": "tsc --watch",
+    "package": "vsce package",
+    "publish": "vsce publish",
+    "test": "bun test"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.3",
+    "webpack": "^5.90.0",
+    "webpack-cli": "^5.1.4",
+    "ts-loader": "^9.5.1",
+    "@vscode/vsce": "^2.24.0"
+  }
+}

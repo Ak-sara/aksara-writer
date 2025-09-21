@@ -1,0 +1,26 @@
+{
+  "name": "@aksara/cli",
+  "version": "0.1.0",
+  "description": "Command line interface for Aksara Writer",
+  "type": "module",
+  "main": "./dist/index.js",
+  "bin": {
+    "aksara": "./dist/index.js",
+    "aksara-writer": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc && chmod +x dist/index.js",
+    "dev": "tsc --watch",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@aksara/core": "workspace:*",
+    "commander": "^12.0.0",
+    "chalk": "^5.3.0",
+    "ora": "^8.0.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "@types/node": "^20.11.0"
+  }
+}

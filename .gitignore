@@ -1,0 +1,58 @@
+# Theme repositories (manually cloned)
+*.pdf
+*.pptx
+/*.html
+/*test*
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Docker artifacts
+Dockerfile.minimal
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+bun.lock
+
+# Package manager files
+node_modules/
+dist/
+
+# Local environment files
+.env
+.env.local
+
+# VS Code Extension artifacts
+*.vsix
+
+# TypeScript build artifacts
+*.tsbuildinfo
+*.d.ts.map
+
+# Coverage reports
+coverage/
+.nyc_output/
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Dependency directories in packages
+packages/*/node_modules/
+packages/*/dist/
+
+# Build outputs
+build/
+out/
