@@ -3,8 +3,8 @@
  * Modern markdown-to-document converter for Indonesian businesses
  */
 
-import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
+import { readFileSync, existsSync } from 'fs';
+import { join, dirname, resolve, isAbsolute, basename, extname } from 'path';
 import { fileURLToPath } from 'url';
 
 import { ConvertOptions, DocumentMetadata, AksaraDirectives, DocumentSection, ConvertResult } from './types';
@@ -171,7 +171,8 @@ export class AksaraConverter {
           alt = alt.replace(/\s*[xywh]:[^;\s]+/g, '').trim();
         }
 
-        return `<img src="${src}" alt="${alt}" style="${style}">`;
+        const convertedSrc = this.convertImagePath(src);
+        return `<img src="${convertedSrc}" alt="${alt}" style="${style}">`;
       })
       .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -291,6 +292,51 @@ export class AksaraConverter {
       this.loadTemplate,
       this.replaceTemplateVars
     );
+  }
+
+  private convertImagePath(imagePath: string): string {
+    if (imagePath.startsWith('http') || imagePath.startsWith('data:') || isAbsolute(imagePath)) {
+      return imagePath;
+    }
+
+    try {
+      let absolutePath = resolve(process.cwd(), imagePath);
+
+      if (existsSync(absolutePath)) {
+        const fileData = readFileSync(absolutePath);
+        const mimeType = this.getMimeType(absolutePath);
+        const base64Data = fileData.toString('base64');
+        return `data:${mimeType};base64,${base64Data}`;
+      }
+
+      const altPath = resolve(process.cwd(), 'assets', basename(imagePath));
+      if (existsSync(altPath)) {
+        const fileData = readFileSync(altPath);
+        const mimeType = this.getMimeType(altPath);
+        const base64Data = fileData.toString('base64');
+        return `data:${mimeType};base64,${base64Data}`;
+      }
+
+      console.warn(`Image not found: ${imagePath}`);
+      return imagePath; // Return original path as fallback
+    } catch (error) {
+      console.warn(`Error resolving image path ${imagePath}:`, error);
+      return imagePath; // Return original path as fallback
+    }
+  }
+
+  private getMimeType(filePath: string): string {
+    const ext = extname(filePath).toLowerCase().slice(1);
+    const mimeTypes: Record<string, string> = {
+      'png': 'image/png',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'gif': 'image/gif',
+      'svg': 'image/svg+xml',
+      'webp': 'image/webp',
+      'bmp': 'image/bmp'
+    };
+    return mimeTypes[ext || ''] || 'image/png';
   }
 }
 

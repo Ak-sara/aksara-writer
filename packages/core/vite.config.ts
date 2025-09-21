@@ -20,7 +20,6 @@ export default defineConfig({
         'pptxgenjs',
         'marked',
         'jszip',
-        'html-pdf-node',
         'gray-matter'
       ]
     }

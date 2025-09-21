@@ -8,7 +8,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
-import { AksaraConverter, ConvertOptions } from '../../core/dist/index.js';
+import { AksaraConverter, ConvertOptions } from 'aksara-writer-core';
 import { readFile, writeFile } from 'fs/promises';
 import { extname, basename, resolve } from 'path';
 

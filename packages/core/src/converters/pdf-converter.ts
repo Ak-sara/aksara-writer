@@ -1,5 +1,7 @@
 import { DocumentSection, AksaraDirectives, DocumentMetadata, ConvertOptions, ConvertResult } from '../types';
 import { HtmlConverter } from './html-converter';
+import { readFileSync, existsSync } from 'fs';
+import { resolve, isAbsolute, basename, extname } from 'path';
 
 export class PdfConverter {
   private htmlConverter: HtmlConverter;
@@ -59,7 +61,7 @@ export class PdfConverter {
 
       return {
         success: true,
-        data: pdfBuffer,
+        data: Buffer.from(pdfBuffer),
         mimeType: 'application/pdf'
       };
 
@@ -113,27 +115,24 @@ export class PdfConverter {
   }
 
   private convertRelativeImagePaths(html: string): string {
-    const path = require('path');
-    const fs = require('fs');
-
     const convertPath = (imagePath: string): string | null => {
-      if (imagePath.startsWith('http') || imagePath.startsWith('data:') || path.isAbsolute(imagePath)) {
+      if (imagePath.startsWith('http') || imagePath.startsWith('data:') || isAbsolute(imagePath)) {
         return null;
       }
 
       try {
-        let absolutePath = path.resolve(process.cwd(), imagePath);
+        let absolutePath = resolve(process.cwd(), imagePath);
 
-        if (fs.existsSync(absolutePath)) {
-          const fileData = fs.readFileSync(absolutePath);
+        if (existsSync(absolutePath)) {
+          const fileData = readFileSync(absolutePath);
           const mimeType = this.getMimeType(absolutePath);
           const base64Data = fileData.toString('base64');
           return `data:${mimeType};base64,${base64Data}`;
         }
 
-        const altPath = path.resolve(process.cwd(), 'assets', path.basename(imagePath));
-        if (fs.existsSync(altPath)) {
-          const fileData = fs.readFileSync(altPath);
+        const altPath = resolve(process.cwd(), 'assets', basename(imagePath));
+        if (existsSync(altPath)) {
+          const fileData = readFileSync(altPath);
           const mimeType = this.getMimeType(altPath);
           const base64Data = fileData.toString('base64');
           return `data:${mimeType};base64,${base64Data}`;
@@ -160,7 +159,7 @@ export class PdfConverter {
   }
 
   private getMimeType(filePath: string): string {
-    const ext = filePath.toLowerCase().split('.').pop();
+    const ext = extname(filePath).toLowerCase().slice(1);
     const mimeTypes: Record<string, string> = {
       'png': 'image/png',
       'jpg': 'image/jpeg',

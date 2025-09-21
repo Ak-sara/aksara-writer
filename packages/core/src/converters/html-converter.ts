@@ -1,4 +1,6 @@
 import { DocumentSection, AksaraDirectives, DocumentMetadata, ConvertOptions, ConvertResult } from '../types';
+import { readFileSync, existsSync } from 'fs';
+import { resolve, isAbsolute, basename, extname } from 'path';
 
 export class HtmlConverter {
   constructor(
@@ -140,9 +142,10 @@ export class HtmlConverter {
     }
 
     if (this.directives.background) {
+      const backgroundPath = this.convertImagePath(this.directives.background);
       styles += `
         .document-section {
-          background-image: url(${this.directives.background}) !important;
+          background-image: url(${backgroundPath}) !important;
           background-size: cover !important;
           background-position: center !important;
           background-repeat: no-repeat !important;
@@ -239,9 +242,13 @@ export class HtmlConverter {
           }
         }
 
-        return `<img src="${src}" alt="image" style="${style}">`;
+        const convertedSrc = this.convertImagePath(src);
+        return `<img src="${convertedSrc}" alt="image" style="${style}">`;
       })
-      .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; height: auto;">')
+      .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
+        const convertedSrc = this.convertImagePath(src);
+        return `<img src="${convertedSrc}" alt="${alt}" style="max-width: 100%; height: auto;">`;
+      })
       .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
       .replace(/\|.*\|/g, (match) => {
         const cells = match.split('|').map(cell => cell.trim()).filter(Boolean);
@@ -251,5 +258,50 @@ export class HtmlConverter {
       .replace(/^(?!<[uh])/gm, '<p>')
       .replace(/(?<!>)$/gm, '</p>')
       .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+  }
+
+  private convertImagePath(imagePath: string): string {
+    if (imagePath.startsWith('http') || imagePath.startsWith('data:') || isAbsolute(imagePath)) {
+      return imagePath;
+    }
+
+    try {
+      let absolutePath = resolve(process.cwd(), imagePath);
+
+      if (existsSync(absolutePath)) {
+        const fileData = readFileSync(absolutePath);
+        const mimeType = this.getMimeType(absolutePath);
+        const base64Data = fileData.toString('base64');
+        return `data:${mimeType};base64,${base64Data}`;
+      }
+
+      const altPath = resolve(process.cwd(), 'assets', basename(imagePath));
+      if (existsSync(altPath)) {
+        const fileData = readFileSync(altPath);
+        const mimeType = this.getMimeType(altPath);
+        const base64Data = fileData.toString('base64');
+        return `data:${mimeType};base64,${base64Data}`;
+      }
+
+      console.warn(`Image not found: ${imagePath}`);
+      return imagePath; // Return original path as fallback
+    } catch (error) {
+      console.warn(`Error resolving image path ${imagePath}:`, error);
+      return imagePath; // Return original path as fallback
+    }
+  }
+
+  private getMimeType(filePath: string): string {
+    const ext = extname(filePath).toLowerCase().slice(1);
+    const mimeTypes: Record<string, string> = {
+      'png': 'image/png',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'gif': 'image/gif',
+      'svg': 'image/svg+xml',
+      'webp': 'image/webp',
+      'bmp': 'image/bmp'
+    };
+    return mimeTypes[ext || ''] || 'image/png';
   }
 }
