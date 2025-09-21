@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Document</title>
+    <style>
+        /* Document-focused CSS with clear page separation */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', 'Segoe UI', 'Noto Sans', sans-serif;
+  line-height: 1.6;
+  color: #2c3e50;
+  background: #1a1a1a;
+  padding: 2rem;
+}
+
+.aksara-document {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.document-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  text-align: center;
+  color: white;
+  padding: 2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+  margin-bottom: 2rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+.document-subtitle {
+  font-size: 1.5rem;
+  text-align: center;
+  color: #666;
+  margin-bottom: 2rem;
+  font-weight: 300;
+}
+
+/* PAGE-LIKE SECTIONS - Like Marp slides or Word pages */
+.document-section {
+  background: #f8f9fa;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  margin-bottom: 2rem;
+  margin-left: auto;
+  margin-right: auto;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  border: 1px solid #ddd;
+  overflow: hidden;
+}
+
+/* Document mode specific sizing */
+body[data-type="document"] .document-section,
+body:not([data-type]) .document-section {
+  min-height: 29.7cm; /* A4 height */
+  width: 21cm; /* A4 width */
+}
+
+.document-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  color: #666;
+  font-size: 0.9rem;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+.document-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  color: #6c757d;
+  font-size: 0.8rem;
+  margin-top: auto;
+}
+
+.section-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: hidden;
+}
+
+/* Typography - Optimized for page-like display */
+h1 {
+  color: #2c3e50;
+  font-size: 2rem;
+  margin: 1rem 0 0.8rem 0;
+  font-weight: 700;
+  line-height: 1.2;
+  border-bottom: 2px solid #667eea;
+  padding-bottom: 0.5rem;
+}
+
+h2 {
+  color: #34495e;
+  font-size: 1.5rem;
+  margin: 1.5rem 0 0.8rem 0;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+h3 {
+  color: #34495e;
+  font-size: 1.2rem;
+  margin: 1.2rem 0 0.6rem 0;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+h4, h5, h6 {
+  color: #5a6c7d;
+  margin: 1rem 0 0.5rem 0;
+  font-weight: 600;
+}
+
+p {
+  margin: 0.2rem 0;
+  text-align: justify;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+/* Lists */
+ul, ol {
+  margin: 1rem 0;
+  padding-left: 2rem;
+}
+
+li {
+  margin: 0.4rem 0;
+  line-height: 1.6;
+}
+
+/* Links */
+a {
+  color: #667eea;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: all 0.3s ease;
+}
+
+a:hover {
+  border-bottom: 1px solid #667eea;
+}
+
+/* Code blocks */
+code {
+  background: #f1f3f4;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.9rem;
+  color: #d73a49;
+}
+
+pre {
+  background: #f6f8fa;
+  padding: 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 1rem 0;
+  border-left: 4px solid #667eea;
+}
+
+pre code {
+  background: none;
+  padding: 0;
+  color: #24292e;
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th {
+  background: red;
+  color: white;
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+td {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid #e9ecef;
+  vertical-align: top;
+}
+
+tr:nth-child(even) {
+  background: #f8f9fa;
+}
+
+/* Blockquotes */
+blockquote {
+  border-left: 4px solid #667eea;
+  padding: 1rem 1.5rem;
+  margin: 1.5rem 0;
+  background: #f8f9fa;
+  font-style: italic;
+  position: relative;
+}
+
+blockquote::before {
+  content: '"';
+  font-size: 4rem;
+  color: #667eea;
+  position: absolute;
+  top: -0.5rem;
+  left: 0.5rem;
+  opacity: 0.3;
+}
+
+/* Images */
+img {
+  max-width: 100%;
+  height: auto;
+  margin: 0;
+}
+
+/* Responsive design */
+@media (max-width: 1400px) {
+  .document-section {
+    width: 90vw;
+    min-height: calc(90vw * 1.414); /* A4 ratio */
+  }
+}
+
+@media (max-width: 900px) {
+  body {
+    padding: 1rem;
+  }
+
+  .document-section {
+    width: 95vw;
+    min-height: calc(95vw * 1.414);
+    margin-bottom: 1rem;
+  }
+
+  .section-content {
+    padding: 1rem;
+  }
+
+  h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.2rem; }
+  h3 { font-size: 1rem; }
+  p { font-size: 0.85rem; }
+}
+
+/* Print styles for PDF export */
+@media print {
+  body {
+    background: white;
+    padding: 0;
+  }
+
+  .aksara-document {
+    margin: 0;
+  }
+
+  .document-section {
+    width: 100%;
+    min-height: 100vh;
+    page-break-after: always;
+    margin-bottom: 0;
+    box-shadow: none;
+    border: none;
+  }
+
+  .document-section:last-child {
+    page-break-after: avoid;
+  }
+
+  .presentation-controls,
+  .document-controls {
+    display: none !important;
+  }
+}
+
+/* VS Code Context - Hide fullscreen button when in VS Code webview */
+.vscode-context .fullscreen-btn {
+  display: none !important;
+}
+
+/* Auto-hiding Document Controls with fade effect */
+.document-controls {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  background: rgba(255,255,255,0.95);
+  border-radius: 25px;
+  padding: 0.8rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: #333;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.4s cubic-bezier(0.4, 0.0, 0.2, 1), visibility 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+  pointer-events: none;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0,0,0,0.1);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+.document-controls.visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.document-controls .nav-btn {
+  background: rgba(0,0,0,0.1);
+  color: #333;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.document-controls .nav-btn:hover {
+  background: white;
+  color: black;
+}
+
+.document-controls .page-nav {
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-left: 1px solid rgba(255,255,255,0.3);
+  padding-left: 0.8rem;
+  margin-left: 0.5rem;
+}
+        
+        .document-section {
+          aspect-ratio: 1.7777777777777777;
+          width: 90vw;
+          max-width: 1200px;
+          min-height: calc(90vw / 1.7777777777777777);
+          margin: 2rem auto;
+          box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+        }
+      
+        .document-section {
+          background-image: url(./background.jpg) !important;
+          background-size: cover !important;
+          background-position: center !important;
+          background-repeat: no-repeat !important;
+        }
+      
+        /* Simple Presentation Mode - Height-driven responsive sizing */
+body[data-type="presentation"] {
+  margin: 0;
+  padding: 0;
+  background: #1a1a1a;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+body[data-type="presentation"] .aksara-document {
+  position: fixed !important;
+  top: 1em !important;
+  bottom: 1em !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  height: calc(100vh - 2em) !important;
+  width: calc((100vh - 2em) * 1.6 + 2em) !important;
+  min-width: calc((100vh - 2em) * 1.6 + 2em) !important;
+  max-width: none !important;
+  margin: 0 !important;
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  place-items: center !important;
+}
+
+body[data-type="presentation"] .document-section {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: calc((100vh - 2em) * 1.6) !important;
+  height: calc(100vh - 2em) !important;
+  min-height: calc(100vh - 2em) !important;
+  max-height: calc(100vh - 2em) !important;
+  aspect-ratio: 16/10 !important;
+  background: white !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  margin: 0 !important;
+  margin-bottom: 0 !important;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+body[data-type="presentation"] .document-section.active {
+  opacity: 1;
+  visibility: visible;
+  z-index: 10;
+}
+
+body[data-type="presentation"] .document-section.prev {
+  opacity: 0;
+  visibility: hidden;
+  z-index: 1;
+}
+
+body[data-type="presentation"] .document-section.next {
+  opacity: 0;
+  visibility: hidden;
+  z-index: 1;
+}
+
+body[data-type="presentation"] .document-header {
+  flex-shrink: 0;
+  height: 60px;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #666;
+  font-size: 0.9rem;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+body[data-type="presentation"] .document-footer {
+  flex-shrink: 0;
+  height: 50px;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #6c757d;
+  font-size: 0.8rem;
+}
+
+body[data-type="presentation"] .section-content {
+  flex: 1;
+  padding: 20px 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  overflow-y: auto;
+  min-height: 0;
+}
+        /* Auto-hiding Presentation Controls with fade effect */
+.presentation-controls {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  background: rgba(0,0,0,0.8);
+  border-radius: 25px;
+  padding: 0.8rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: white;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.4s cubic-bezier(0.4, 0.0, 0.2, 1), visibility 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+  pointer-events: none;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.2);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.presentation-controls.visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.fullscreen-btn {
+  font-size: 1.1rem;
+}
+
+.nav-btn, .zoom-btn {
+  background: rgba(255,255,255,0.2);
+  color: white;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  min-width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+}
+
+.nav-btn:hover, .zoom-btn:hover {
+  background: rgba(255,255,255,0.3);
+  transform: scale(1.05);
+}
+
+.nav-btn:active, .zoom-btn:active {
+  transform: scale(0.95);
+}
+
+.zoom-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.slide-counter {
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-left: 1px solid rgba(255,255,255,0.3);
+  padding-left: 0.8rem;
+  margin-left: 0.5rem;
+}
+
+/* Document controls - unified with presentation style (same dark theme) */
+.document-controls {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  background: rgba(0,0,0,0.8);
+  border-radius: 25px;
+  padding: 0.8rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: white;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.4s cubic-bezier(0.4, 0.0, 0.2, 1), visibility 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+  pointer-events: none;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.2);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.document-controls.visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.document-controls .nav-btn,
+.document-controls .zoom-btn {
+  background: rgba(255,255,255,0.2);
+  color: white;
+}
+
+.document-controls .nav-btn:hover,
+.document-controls .zoom-btn:hover {
+  background: rgba(255,255,255,0.3);
+  transform: scale(1.05);
+}
+
+.document-controls .slide-counter,
+.document-controls .page-nav {
+  border-left: 1px solid rgba(255,255,255,0.3);
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding-left: 0.8rem;
+  margin-left: 0.5rem;
+}
+/* Reset and base styles */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  font-family: 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+  margin: 0;
+  padding: 0;
+  background: #1a1a1a;
+  color: #2c3e50;
+  line-height: 1.6;
+}
+
+body {
+  padding: 2rem;
+}
+
+.aksara-document {
+  max-width: none;
+}
+
+/* Document title and metadata */
+.document-title {
+  text-align: center;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.document-meta {
+  text-align: center;
+  color: #7f8c8d;
+  margin-bottom: 3rem;
+  padding: 1rem;
+  background: rgba(255,255,255,0.8);
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+.document-subtitle {
+  font-size: 1.5rem;
+  text-align: center;
+  color: #666;
+  margin-bottom: 2rem;
+  font-weight: 300;
+}
+
+/* PAGE-LIKE SECTIONS - Like Marp slides or Word pages */
+.document-section {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  margin-bottom: 2rem;
+  margin-left: auto;
+  margin-right: auto;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  border: 1px solid #ddd;
+  overflow: hidden;
+}
+
+/* Document mode specific sizing */
+body[data-type="document"] .document-section,
+body:not([data-type]) .document-section {
+  min-height: 29.7cm; /* A4 height */
+  width: 21cm; /* A4 width */
+}
+
+
+
+
+/* Typography - Optimized for page-like display */
+h1 {
+  color: #2c3e50;
+  font-size: 2rem;
+  margin: 1rem 0 0.8rem 0;
+  font-weight: 700;
+  line-height: 1.2;
+  border-bottom: 2px solid #667eea;
+  padding-bottom: 0.5rem;
+}
+
+h2 {
+  color: #34495e;
+  font-size: 1.5rem;
+  margin: 1.5rem 0 0.8rem 0;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+h3 {
+  color: #34495e;
+  font-size: 1.2rem;
+  margin: 1.2rem 0 0.6rem 0;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+h4, h5, h6 {
+  color: #5a6c7d;
+  margin: 1rem 0 0.5rem 0;
+  font-weight: 600;
+}
+
+p {
+  margin: 0.2rem 0;
+  text-align: justify;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+/* Lists */
+ul, ol {
+  margin: 1rem 0;
+  padding-left: 2rem;
+}
+
+li {
+  margin: 0.4rem 0;
+  line-height: 1.6;
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th {
+  background: red;
+  color: white;
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+td {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid #e9ecef;
+  vertical-align: top;
+}
+
+tr:nth-child(even) {
+  background: #f8f9fa;
+}
+
+/* Responsive scaling for different screen sizes */
+@media (max-width: 1400px) {
+  .document-section {
+    width: 90vw;
+    min-height: calc(90vw * 1.414); /* A4 ratio */
+  }
+}
+
+@media (max-width: 900px) {
+  body {
+    padding: 1rem;
+  }
+
+  .document-section {
+    width: 95vw;
+    min-height: calc(95vw * 1.414);
+    margin-bottom: 1rem;
+  }
+
+
+  h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.2rem; }
+  h3 { font-size: 1rem; }
+  p { font-size: 0.85rem; }
+}
+
+/* Print styles for PDF export */
+@media print {
+  body {
+    background: white;
+    padding: 0;
+  }
+
+  .aksara-document {
+    margin: 0;
+  }
+
+  .document-section {
+    width: 100%;
+    min-height: 100vh;
+    page-break-after: always;
+    margin-bottom: 0;
+    box-shadow: none;
+    border: none;
+  }
+
+  .document-section:last-child {
+    page-break-after: avoid;
+  }
+}
+    </style>
+</head>
+<body data-type="presentation">
+    <!-- Presentation Controls -->
+<div class="presentation-controls" id="presentation-controls">
+    <button class="nav-btn" onclick="previousSlide()">◀</button>
+    <div class="slide-counter">
+        <span id="current-slide">1</span> / 2
+    </div>
+    <button class="nav-btn" onclick="nextSlide()">▶</button>
+    <div class="zoom-controls">
+        <button class="zoom-btn" onclick="zoomIn()">🔍+</button>
+        <button class="zoom-btn" onclick="zoomOut()">🔍-</button>
+        <button class="zoom-btn" onclick="fitWidth()">📄</button>
+    </div>
+    <button class="nav-btn fullscreen-btn" onclick="toggleFullscreen()" title="Toggle Fullscreen">⛶</button>
+</div>
+
+    <!-- Document Content -->
+    
+      <div class="aksara-document" data-size="16:9">
+        
+        <section class="document-section" data-section="1">
+          
+      <header class="document-header">
+        <div class="header-left"><p><img src="./logo.svg" alt="image" style="position: absolute; width: 40px; height: 40px; "></div>
+        <div class="header-center"><p>Company Name</p></div>
+        <div class="header-right"><p>2025</p></div>
+      </header>
+    
+          <div class="section-content">
+            <h1>Aksara Writer - VS Code Extension</h1>
+<img src="https://raw.githubusercontent.com/Ak-sara/aksara-writer/tree/main/packages/vscode/aksara.png" alt="Aksara Writer Logo" style="max-width: 100%; height: auto;">
+<p><strong>Modern markdown converter with Indonesian business templates for VS Code</strong></p>
+<p>Transform your markdown documents into professional PDF, HTML, and PowerPoint presentations with Aksara Writer - the document creator designed specifically for Indonesian businesses.</p>
+<h2>🚀 Features</h2>
+<ul><li><strong>📄 Multiple Export Formats</strong>: Convert markdown to PDF, HTML, and PPTX</li>
+<li><strong>🇮🇩 Indonesian Business Focus</strong>: Templates designed for local business needs</li>
+<li><strong>👁️ Live Preview</strong>: Real-time preview of your documents</li>
+<li><strong>📝 Business Templates</strong>: Invoice, Proposal, Report, Contract, and more</li>
+<li><strong>🎨 Professional Themes</strong>: Multiple themes for different document types</li>
+<li><strong>⚡ One-Click Access</strong>: Marp-style single button for all actions</li>
+</ul><h2>📦 Installation</h2>
+<h3>Prerequisites</h3>
+<p><strong>Install Aksara Writer CLI globally</strong>:</p>
+<pre><code class="bash">npm install -g aksara-writer</code></pre>
+<p><strong>Verify installation</strong>:</p>
+<pre><code class="bash">aksara-writer --help</code></pre>
+<h3>Extension Installation</h3>
+<ul><li>Download the <code>.vsix</code> file from the <a href="https://github.com/ak-sara/aksara-writer/releases">releases page</a></li>
+<li>Open VS Code</li>
+<li>Press <code>Ctrl+Shift+P</code> (Windows/Linux) or <code>Cmd+Shift+P</code> (macOS)</li>
+<li>Type "Extensions: Install from VSIX"</li>
+<li>Select the downloaded <code>.vsix</code> file</li>
+</ul><h2>🎯 Usage</h2>
+<h3>Getting Started</h3>
+<ul><li><strong>Open a Markdown File</strong>: Create or open any <code>.md</code> file in VS Code</li>
+<li><strong>Access Aksara Writer</strong>: Click the <strong>"Aksara Writer"</strong> button in the editor toolbar (▶️ icon)</li>
+<li><strong>Choose Action</strong>: Select from the menu:</li>
+</ul>- 👁️ <strong>Preview Document</strong> - Live HTML preview
+<p>- 📄 <strong>Export to PDF</strong> - Generate PDF document</p>
+<p>- 📊 <strong>Export to PowerPoint</strong> - Create PPTX presentation</p>
+<p>- 🌐 <strong>Export to HTML</strong> - Generate HTML file</p>
+<p>- 📝 <strong>Insert Template</strong> - Add business templates</p>
+<p>- 🎨 <strong>Change Theme</strong> - Select document theme</p>
+<h3>Aksara Directives</h3>
+<p>Use special directives in your markdown to control document appearance:</p>
+<pre><code class="markdown"># Your Content Here</code></pre>
+<h3>Available Templates</h3>
+<ul><li><strong>📄 Default</strong> - Dokumen Umum</li>
+<li><strong>🧾 Invoice</strong> - Faktur Penjualan</li>
+<li><strong>📋 Proposal</strong> - Proposal Bisnis</li>
+<li><strong>📊 Report</strong> - Laporan Bisnis</li>
+<li><strong>📝 Contract</strong> - Kontrak Legal</li>
+<li><strong>📮 Letter</strong> - Surat Resmi</li>
+</ul><h3>Themes</h3>
+<ul><li><strong>🏢 Default</strong> - Indonesian Business</li>
+<li><strong>✨ Minimal</strong> - Clean Design</li>
+<li><strong>🏛️ Corporate</strong> - Formal Corporate</li>
+<li><strong>🏛️ Government</strong> - Government Official</li>
+</ul><h2>📸 Screenshots</h2>
+<h3>Single Button Interface</h3>
+<img src="https://ak-sara.github.io/assets/vscode-button.png" alt="Marp-style Button" style="max-width: 100%; height: auto;">
+<h3>Command Palette</h3>
+<img src="https://ak-sara.github.io/assets/vscode-menu.png" alt="Action Menu" style="max-width: 100%; height: auto;">
+<h3>Live Preview</h3>
+<img src="https://ak-sara.github.io/assets/vscode-preview.png" alt="Preview Window" style="max-width: 100%; height: auto;">
+<h2>⚙️ Configuration</h2>
+<p>Access settings via <code>File > Preferences > Settings</code> and search for "Aksara":</p>
+<ul><li><strong>Default Locale</strong>: <code>id</code> (Indonesian) or <code>en</code> (English)</li>
+<li><strong>Default Theme</strong>: Document theme selection</li>
+<li><strong>Default Page Size</strong>: A4, Letter, or Legal</li>
+<li><strong>Auto Preview</strong>: Automatically show preview for markdown files</li>
+</ul><h2>🔧 Troubleshooting</h2>
+<h3>Common Issues</h3>
+<p><strong>Q: "Command not found: aksara-writer" error when using commands</strong></p>
+<ul><li><strong>A</strong>: Ensure you have installed the CLI globally with <code>npm install -g aksara-writer</code> and that your PATH includes npm global binaries</li>
+</ul><strong>Q: Preview not updating</strong>
+<ul><li><strong>A</strong>: Save your markdown file first, then try the preview again</li>
+</ul><strong>Q: Export fails</strong>
+<ul><li><strong>A</strong>: Check that your markdown file is saved and contains valid Aksara directives</li>
+</ul><h3>Getting Help</h3>
+<ul><li>📖 <strong>Documentation</strong>: <a href="https://ak-sara.github.io">ak-sara.github.io</a></li>
+<li>🐛 <strong>Issues</strong>: <a href="https://github.com/ak-sara/aksara-writer/issues">GitHub Issues</a></li>
+<li>💬 <strong>Discussions</strong>: <a href="https://github.com/ak-sara/aksara-writer/discussions">GitHub Discussions</a></li>
+</ul><h2>🤝 Contributing</h2>
+<p>Aksara Writer is part of the <strong>Ak'sara Initiative</strong> - advancing Indonesia's digital literacy.</p>
+<h3>Ways to Contribute</h3>
+<ul><li><strong>Report Bugs</strong>: Found an issue? <a href="https://github.com/ak-sara/aksara-writer/issues">Report it here</a></li>
+<li><strong>Feature Requests</strong>: Have ideas? <a href="https://github.com/ak-sara/aksara-writer/discussions">Share them with us</a></li>
+<li><strong>Code Contributions</strong>: Fork the repo and submit pull requests</li>
+<li><strong>Templates</strong>: Create Indonesian business templates</li>
+<li><strong>Translations</strong>: Help localize for different regions</li>
+</ul><h3>Development</h3>
+<pre><code class="bash"># Clone and setup
+<p>git clone https://github.com/ak-sara/aksara-writer.git</p>
+<p>cd aksara-writer/packages/vscode</p>
+<h1>Install dependencies</h1>
+<p>bun install</p>
+<h1>Build extension</h1>
+<p>bun run build</p>
+<h1>Package extension</h1>
+<p>bun run package</code></pre></p>
+<h2>📄 License</h2>
+<p>BSD-3-Clause License - see <a href="LICENSE">LICENSE</a> file for details.</p>
+<h2>🌟 About Ak'sara Initiative</h2>
+<p><strong>Ak'sara</strong>, draws from the Sanskrit word for "character" or "alphabet," which holds a deep connection to Indonesian culture. We believe that just as every story is built from individual letters, the best applications are crafted from well-written code.</p>
+<p>Our philosophy is simple: we compose, not just code. Like the ancient scripts of the Nusantara archipelago, each line of code is a fundamental character, which, when thoughtfully arranged, forms a powerful instruction that brings visions to life.</p>
+<h3>Our Projects</h3>
+<ul><li><strong>Aksara Writer</strong> - Document creator for businesses</li>
+<li><strong>Aksara IS</strong> - No-code application builder (Svelte)</li>
+<li><strong>Personal AI Assistant</strong> - Offline AI assistant (Tauri + Rust)</li>
+<li><strong>MerdekaOS</strong> - Arch-based Linux distribution</li>
+</ul><strong>Learn more</strong>: <a href="https://ak-sara.github.io">ak-sara.github.io</a>
+          </div>
+          
+      <footer class="document-footer">
+        <div class="footer-content"><p>© 2025 Your Company - Confidential</p></div>
+        <div class="page-number">Halaman 1 dari 2</div>
+      </footer>
+    
+        </section>
+      
+
+        <section class="document-section" data-section="2">
+          
+      <header class="document-header">
+        <div class="header-left"><p><img src="./logo.svg" alt="image" style="position: absolute; width: 40px; height: 40px; "></div>
+        <div class="header-center"><p>Company Name</p></div>
+        <div class="header-right"><p>2025</p></div>
+      </header>
+    
+          <div class="section-content">
+            <p><strong>Made with ❤️ for Indonesian businesses by the Ak'sara Initiative</strong></p>
+<img src="https://img.shields.io/badge/🇮🇩-Proudly%20Indonesian-red?style=flat-square" alt="Indonesian Flag" style="max-width: 100%; height: auto;">
+<img src="https://img.shields.io/badge/VS%20Code-Extension-blue?style=flat-square&logo=visual-studio-code" alt="VS Code" style="max-width: 100%; height: auto;">
+<img src="https://img.shields.io/badge/License-BSD--3--Clause-blue?style=flat-square" alt="License" style="max-width: 100%; height: auto;">
+          </div>
+          
+      <footer class="document-footer">
+        <div class="footer-content"><p>© 2025 Your Company - Confidential</p></div>
+        <div class="page-number">Halaman 2 dari 2</div>
+      </footer>
+    
+        </section>
+      
+      </div>
+    
+
+    <script>
+        // Load external script content
+        // Aksara Writer Interactive Scripts
+// Initialized with 2 sections
+const totalSections = 2;
+
+    let currentSlide = 0;
+    let currentZoom = 1;
+    const totalSlides = totalSections;
+    const isPresentation = document.body.dataset.type === 'presentation';
+    let controlsVisible = false;
+    let hideTimeout;
+
+// Initialize based on document type
+document.addEventListener('DOMContentLoaded', function() {
+  if (isPresentation) {
+    initializePresentation();
+  } else {
+    initializeDocument();
+  }
+
+  setupControls();
+  setupKeyboardNavigation();
+});
+
+function initializePresentation() {
+  const sections = document.querySelectorAll('.document-section');
+  sections.forEach((section, index) => {
+    if (index === 0) {
+      section.classList.add('active');
+    } else if (index === 1) {
+      section.classList.add('next');
+    }
+  });
+  updateSlideIndicator();
+}
+
+function initializeDocument() {
+  // Document mode initialization
+  updatePageIndicator();
+}
+
+function setupControls() {
+  const controls = document.querySelector('.presentation-controls, .document-controls');
+  if (!controls) return;
+
+  // Show controls on mouse move
+  document.addEventListener('mousemove', showControls);
+  document.addEventListener('keydown', showControls);
+
+  // Hide controls after inactivity
+  function showControls() {
+    controls.classList.add('visible');
+    controlsVisible = true;
+
+    clearTimeout(hideTimeout);
+    hideTimeout = setTimeout(() => {
+      controls.classList.remove('visible');
+      controlsVisible = false;
+    }, 3000);
+  }
+
+  // Keep controls visible on hover
+  controls.addEventListener('mouseenter', () => {
+    clearTimeout(hideTimeout);
+  });
+
+  controls.addEventListener('mouseleave', () => {
+    if (controlsVisible) {
+      hideTimeout = setTimeout(() => {
+        controls.classList.remove('visible');
+        controlsVisible = false;
+      }, 1000);
+    }
+  });
+}
+
+function setupKeyboardNavigation() {
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+    switch(e.key) {
+      case 'ArrowRight':
+      case ' ':
+      case 'PageDown':
+        e.preventDefault();
+        if (isPresentation) {
+          nextSlide();
+        } else {
+          nextPage();
+        }
+        break;
+      case 'ArrowLeft':
+      case 'PageUp':
+        e.preventDefault();
+        if (isPresentation) {
+          previousSlide();
+        } else {
+          previousPage();
+        }
+        break;
+      case 'Home':
+        e.preventDefault();
+        if (isPresentation) {
+          goToSlide(0);
+        } else {
+          goToPage(1);
+        }
+        break;
+      case 'End':
+        e.preventDefault();
+        if (isPresentation) {
+          goToSlide(totalSlides - 1);
+        } else {
+          goToPage(totalSlides);
+        }
+        break;
+      case 'f':
+      case 'F11':
+        e.preventDefault();
+        toggleFullscreen();
+        break;
+      case '=':
+      case '+':
+        e.preventDefault();
+        zoomIn();
+        break;
+      case '-':
+        e.preventDefault();
+        zoomOut();
+        break;
+      case '0':
+        e.preventDefault();
+        fitWidth();
+        break;
+    }
+  });
+}
+
+// Presentation Navigation
+function nextSlide() {
+  if (currentSlide < totalSlides - 1) {
+    currentSlide++;
+    updateSlides();
+    updateSlideIndicator();
+  }
+}
+
+function previousSlide() {
+  if (currentSlide > 0) {
+    currentSlide--;
+    updateSlides();
+    updateSlideIndicator();
+  }
+}
+
+function goToSlide(index) {
+  if (index >= 0 && index < totalSlides) {
+    currentSlide = index;
+    updateSlides();
+    updateSlideIndicator();
+  }
+}
+
+function updateSlides() {
+  const sections = document.querySelectorAll('.document-section');
+
+  sections.forEach((section, index) => {
+    section.classList.remove('active', 'prev', 'next');
+
+    if (index === currentSlide) {
+      section.classList.add('active');
+    } else if (index === currentSlide - 1) {
+      section.classList.add('prev');
+    } else if (index === currentSlide + 1) {
+      section.classList.add('next');
+    }
+  });
+}
+
+function updateSlideIndicator() {
+  const indicator = document.getElementById('current-slide');
+  if (indicator) {
+    indicator.textContent = (currentSlide + 1).toString();
+  }
+}
+
+// Document Navigation
+function nextPage() {
+  const sections = document.querySelectorAll('.document-section');
+  if (currentSlide < sections.length - 1) {
+    currentSlide++;
+    sections[currentSlide].scrollIntoView({ behavior: 'smooth' });
+    updatePageIndicator();
+  }
+}
+
+function previousPage() {
+  const sections = document.querySelectorAll('.document-section');
+  if (currentSlide > 0) {
+    currentSlide--;
+    sections[currentSlide].scrollIntoView({ behavior: 'smooth' });
+    updatePageIndicator();
+  }
+}
+
+function goToPage(pageNumber) {
+  const sections = document.querySelectorAll('.document-section');
+  const index = pageNumber - 1;
+  if (index >= 0 && index < sections.length) {
+    currentSlide = index;
+    sections[currentSlide].scrollIntoView({ behavior: 'smooth' });
+    updatePageIndicator();
+  }
+}
+
+function updatePageIndicator() {
+  const sections = document.querySelectorAll('.document-section');
+  const scrollTop = window.pageYOffset;
+  let currentPage = 1;
+
+  sections.forEach((section, index) => {
+    const rect = section.getBoundingClientRect();
+    if (rect.top <= window.innerHeight / 2 && rect.bottom >= window.innerHeight / 2) {
+      currentPage = index + 1;
+    }
+  });
+
+  currentSlide = currentPage - 1;
+  const indicator = document.getElementById('current-slide');
+  if (indicator) {
+    indicator.textContent = currentPage.toString();
+  }
+}
+
+// Zoom Functions
+function zoomIn() {
+  currentZoom = Math.min(3, currentZoom + 0.1);
+  updateZoom();
+}
+
+function zoomOut() {
+  currentZoom = Math.max(0.5, currentZoom - 0.1);
+  updateZoom();
+}
+
+function fitWidth() {
+  currentZoom = 1;
+  updateZoom();
+}
+
+function updateZoom() {
+  if (isPresentation) {
+    document.querySelector('.aksara-document').style.transform =
+      `translate(-50%, -50%) scale(${currentZoom})`;
+  } else {
+    document.querySelector('.aksara-document').style.transform = `scale(${currentZoom})`;
+  }
+}
+
+// Fullscreen
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(err => {
+      console.log(`Error attempting to enable fullscreen: ${err.message}`);
+    });
+  } else {
+    document.exitFullscreen();
+  }
+}
+
+// Auto-hide controls in fullscreen
+document.addEventListener('fullscreenchange', () => {
+  const controls = document.querySelector('.presentation-controls, .document-controls');
+  if (document.fullscreenElement) {
+    controls?.classList.add('fullscreen-mode');
+  } else {
+    controls?.classList.remove('fullscreen-mode');
+  }
+});
+
+// Initialize on load
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', updatePageIndicator);
+} else {
+  updatePageIndicator();
+}
+
+
+    </script>
+</body>
+</html>

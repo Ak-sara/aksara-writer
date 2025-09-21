@@ -2,8 +2,8 @@
   "name": "aksara-writer-vscode",
   "displayName": "Aksara Writer",
   "description": "Modern markdown converter with Indonesian business templates",
-  "version": "0.1.0",
-  "publisher": "aksara-initiative",
+  "version": "0.1.1",
+  "publisher": "ak-sara",
   "icon": "aksara.png",
   "repository": {
     "type": "git",
@@ -12,6 +12,7 @@
   "bugs": {
     "url": "https://github.com/ak-sara/aksara-writer/issues"
   },
+  "license": "BSD-3-Clause",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -102,8 +103,8 @@
   "scripts": {
     "build": "tsc && webpack --mode production",
     "dev": "tsc --watch",
-    "package": "vsce package",
-    "publish": "vsce publish",
+    "package": "vsce package --no-dependencies",
+    "publish": "vsce publish --no-dependencies",
     "test": "bun test"
   },
   "dependencies": {},

@@ -44,7 +44,7 @@
     "aksara"
   ],
   "author": "Ak'sara Initiative",
-  "license": "MIT",
+  "license": "BSD-3-Clause",
   "repository": {
     "type": "git",
     "url": "https://github.com/ak-sara/aksara-writer.git"

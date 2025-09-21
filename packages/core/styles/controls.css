@@ -1,0 +1,123 @@
+/* Auto-hiding Presentation Controls with fade effect */
+.presentation-controls {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  background: rgba(0,0,0,0.8);
+  border-radius: 25px;
+  padding: 0.8rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: white;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.4s cubic-bezier(0.4, 0.0, 0.2, 1), visibility 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+  pointer-events: none;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.2);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.presentation-controls.visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.fullscreen-btn {
+  font-size: 1.1rem;
+}
+
+.nav-btn, .zoom-btn {
+  background: rgba(255,255,255,0.2);
+  color: white;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  min-width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+}
+
+.nav-btn:hover, .zoom-btn:hover {
+  background: rgba(255,255,255,0.3);
+  transform: scale(1.05);
+}
+
+.nav-btn:active, .zoom-btn:active {
+  transform: scale(0.95);
+}
+
+.zoom-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.slide-counter {
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-left: 1px solid rgba(255,255,255,0.3);
+  padding-left: 0.8rem;
+  margin-left: 0.5rem;
+}
+
+/* Document controls - unified with presentation style (same dark theme) */
+.document-controls {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  background: rgba(0,0,0,0.8);
+  border-radius: 25px;
+  padding: 0.8rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: white;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.4s cubic-bezier(0.4, 0.0, 0.2, 1), visibility 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+  pointer-events: none;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.2);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.document-controls.visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.document-controls .nav-btn,
+.document-controls .zoom-btn {
+  background: rgba(255,255,255,0.2);
+  color: white;
+}
+
+.document-controls .nav-btn:hover,
+.document-controls .zoom-btn:hover {
+  background: rgba(255,255,255,0.3);
+  transform: scale(1.05);
+}
+
+.document-controls .slide-counter,
+.document-controls .page-nav {
+  border-left: 1px solid rgba(255,255,255,0.3);
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding-left: 0.8rem;
+  margin-left: 0.5rem;
+}

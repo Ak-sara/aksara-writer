@@ -1,7 +1,7 @@
 {
-  "name": "@aksara/core",
+  "name": "aksara-writer-core",
   "version": "0.1.0",
-  "description": "Core markdown conversion engine for Aksara Writer",
+  "description": "Core markdown conversion engine for Aksara Writer - Indonesian business document converter",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -33,6 +33,27 @@
     "pdf",
     "html",
     "pptx",
-    "converter"
-  ]
+    "converter",
+    "indonesian",
+    "business",
+    "aksara",
+    "document"
+  ],
+  "author": "Ak'sara Initiative",
+  "license": "BSD-3-Clause",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ak-sara/aksara-writer.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/ak-sara/aksara-writer/issues"
+  },
+  "homepage": "https://ak-sara.github.io",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
 }

@@ -1,6 +1,6 @@
 # Aksara Writer - VS Code Extension
 
-![Aksara Writer Logo](https://raw.githubusercontent.com/ak-sara/aksara-writer/main/packages/vscode/aksara.png)
+![Aksara Writer Logo](https://raw.githubusercontent.com/Ak-sara/aksara-writer/tree/main/packages/vscode/aksara.png)
 
 **Modern markdown converter with Indonesian business templates for VS Code**
 
@@ -19,27 +19,15 @@ Transform your markdown documents into professional PDF, HTML, and PowerPoint pr
 
 ### Prerequisites
 
-1. **Install Bun Runtime** (required for Aksara CLI):
-   ```bash
-   # macOS/Linux
-   curl -fsSL https://bun.sh/install | bash
+**Install Aksara Writer CLI globally**:
+```bash
+npm install -g aksara-writer
+```
 
-   # Windows (PowerShell)
-   powershell -c "irm bun.sh/install.ps1 | iex"
-   ```
-
-2. **Install Aksara Writer CLI**:
-   ```bash
-   # Clone the repository
-   git clone https://github.com/ak-sara/aksara-writer.git
-   cd aksara-writer
-
-   # Install dependencies
-   bun install
-
-   # Test the CLI
-   bun run packages/cli/src/index.ts --help
-   ```
+**Verify installation**:
+```bash
+aksara-writer --help
+```
 
 ### Extension Installation
 
@@ -123,8 +111,8 @@ Access settings via `File > Preferences > Settings` and search for "Aksara":
 
 ### Common Issues
 
-**Q: "Module not found" error when using commands**
-- **A**: Ensure Bun is installed and Aksara Writer CLI is properly set up in your project
+**Q: "Command not found: aksara-writer" error when using commands**
+- **A**: Ensure you have installed the CLI globally with `npm install -g aksara-writer` and that your PATH includes npm global binaries
 
 **Q: Preview not updating**
 - **A**: Save your markdown file first, then try the preview again
@@ -169,7 +157,7 @@ bun run package
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+BSD-3-Clause License - see [LICENSE](LICENSE) file for details.
 
 ## 🌟 About Ak'sara Initiative
 
@@ -192,4 +180,4 @@ Our philosophy is simple: we compose, not just code. Like the ancient scripts of
 
 ![Indonesian Flag](https://img.shields.io/badge/🇮🇩-Proudly%20Indonesian-red?style=flat-square)
 ![VS Code](https://img.shields.io/badge/VS%20Code-Extension-blue?style=flat-square&logo=visual-studio-code)
-![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
+![License](https://img.shields.io/badge/License-BSD--3--Clause-blue?style=flat-square)

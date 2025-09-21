@@ -1,0 +1,98 @@
+/* Simple Presentation Mode - Height-driven responsive sizing */
+body[data-type="presentation"] {
+  margin: 0;
+  padding: 0;
+  background: #1a1a1a;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+body[data-type="presentation"] .aksara-document {
+  position: fixed !important;
+  top: 1em !important;
+  bottom: 1em !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  height: calc(100vh - 2em) !important;
+  width: calc((100vh - 2em) * 1.6 + 2em) !important;
+  min-width: calc((100vh - 2em) * 1.6 + 2em) !important;
+  max-width: none !important;
+  margin: 0 !important;
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  place-items: center !important;
+}
+
+body[data-type="presentation"] .document-section {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: calc((100vh - 2em) * 1.6) !important;
+  height: calc(100vh - 2em) !important;
+  min-height: calc(100vh - 2em) !important;
+  max-height: calc(100vh - 2em) !important;
+  aspect-ratio: 16/10 !important;
+  background: white !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  margin: 0 !important;
+  margin-bottom: 0 !important;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+body[data-type="presentation"] .document-section.active {
+  opacity: 1;
+  visibility: visible;
+  z-index: 10;
+}
+
+body[data-type="presentation"] .document-section.prev {
+  opacity: 0;
+  visibility: hidden;
+  z-index: 1;
+}
+
+body[data-type="presentation"] .document-section.next {
+  opacity: 0;
+  visibility: hidden;
+  z-index: 1;
+}
+
+body[data-type="presentation"] .document-header {
+  flex-shrink: 0;
+  height: 60px;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #666;
+  font-size: 0.9rem;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+body[data-type="presentation"] .document-footer {
+  flex-shrink: 0;
+  height: 50px;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #6c757d;
+  font-size: 0.8rem;
+}
+
+body[data-type="presentation"] .section-content {
+  flex: 1;
+  padding: 20px 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  overflow-y: auto;
+  min-height: 0;
+}

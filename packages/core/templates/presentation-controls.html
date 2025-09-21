@@ -1,0 +1,14 @@
+<!-- Presentation Controls -->
+<div class="presentation-controls" id="presentation-controls">
+    <button class="nav-btn" onclick="previousSlide()">◀</button>
+    <div class="slide-counter">
+        <span id="current-slide">1</span> / {{totalSections}}
+    </div>
+    <button class="nav-btn" onclick="nextSlide()">▶</button>
+    <div class="zoom-controls">
+        <button class="zoom-btn" onclick="zoomIn()">🔍+</button>
+        <button class="zoom-btn" onclick="zoomOut()">🔍-</button>
+        <button class="zoom-btn" onclick="fitWidth()">📄</button>
+    </div>
+    <button class="nav-btn fullscreen-btn" onclick="toggleFullscreen()" title="Toggle Fullscreen">⛶</button>
+</div>

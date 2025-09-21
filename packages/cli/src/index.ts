@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 
 /**
  * Aksara Writer CLI
@@ -8,14 +8,14 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
-import { AksaraConverter, ConvertOptions } from '../../core/src/index.ts';
+import { AksaraConverter, ConvertOptions } from '../../core/dist/index.js';
 import { readFile, writeFile } from 'fs/promises';
 import { extname, basename, resolve } from 'path';
 
 const program = new Command();
 
 program
-  .name('aksara')
+  .name('aksara-writer')
   .description('Aksara Writer - Modern markdown converter for Indonesian businesses')
   .version('0.1.0');
 

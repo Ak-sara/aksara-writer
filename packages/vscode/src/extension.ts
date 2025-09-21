@@ -14,6 +14,152 @@ const execAsync = promisify(exec);
 let globalPreviewPanel: vscode.WebviewPanel | undefined;
 let previewSubscriptions: vscode.Disposable[] = [];
 
+/**
+ * Fix image paths in HTML for VS Code webview
+ */
+function fixImagePathsInHtml(html: string, documentPath: string, webview: vscode.Webview): string {
+    const docDir = path.dirname(documentPath);
+
+    // Replace image src attributes with webview URIs
+    return html.replace(/(<img[^>]+src=["'])([^"']+)(["'][^>]*>)/g, (match, prefix, src, suffix) => {
+        // Skip if already a data URL, HTTP URL, or webview resource
+        if (src.startsWith('data:') || src.startsWith('http') || src.startsWith('vscode-webview-resource:')) {
+            return match;
+        }
+
+        // Convert relative paths to absolute paths, then to webview URIs
+        let absolutePath: string;
+        if (src.startsWith('./')) {
+            absolutePath = path.join(docDir, src.substring(2));
+        } else if (src.startsWith('../')) {
+            absolutePath = path.resolve(docDir, src);
+        } else if (!path.isAbsolute(src)) {
+            absolutePath = path.join(docDir, src);
+        } else {
+            absolutePath = src;
+        }
+
+        // Convert to webview URI
+        try {
+            const webviewUri = webview.asWebviewUri(vscode.Uri.file(absolutePath));
+            return `${prefix}${webviewUri.toString()}${suffix}`;
+        } catch (error) {
+            console.warn(`Failed to convert image path: ${src}`, error);
+            return match;
+        }
+    });
+}
+
+/**
+ * Generate HTML for non-Aksara documents
+ */
+function getNoAksaraHtml(fileName: string): string {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aksara Writer - No Directive</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 2rem;
+            background: #f8f9fa;
+            color: #2c3e50;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 600px;
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+        h1 {
+            color: #34495e;
+            margin-bottom: 1rem;
+        }
+        .filename {
+            background: #ecf0f1;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-family: monospace;
+            margin: 1rem 0;
+            color: #2c3e50;
+        }
+        .instructions {
+            background: #e8f4fd;
+            border: 1px solid #bee5eb;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            text-align: left;
+        }
+        .instructions h3 {
+            margin-top: 0;
+            color: #0c5460;
+        }
+        .code-block {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 1rem;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            margin: 1rem 0;
+            text-align: left;
+        }
+        .note {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">📄</div>
+        <h1>Aksara Writer Preview</h1>
+        <div class="filename">${fileName}</div>
+
+        <div class="instructions">
+            <h3>🔧 To enable Aksara Writer preview:</h3>
+            <p>Add the following directive to the top of your markdown file:</p>
+            <div class="code-block"><!--
+aksara:true
+type: document
+-->
+
+# Your Content Here</div>
+            <p><strong>For presentations:</strong></p>
+            <div class="code-block"><!--
+aksara:true
+type: presentation
+size: 16:9
+-->
+
+# Your Presentation</div>
+        </div>
+
+        <div class="note">
+            This file will automatically preview when you add the <code>aksara:true</code> directive.
+        </div>
+    </div>
+</body>
+</html>
+    `;
+}
+
 interface ConvertOptions {
     format: 'html' | 'pdf' | 'pptx';
     locale?: 'id' | 'en';
@@ -28,21 +174,8 @@ import * as fs from 'fs/promises';
  */
 async function convertWithCli(filePath: string, options: ConvertOptions): Promise<{success: boolean, data?: string, error?: string}> {
     try {
-        // Find the aksara-writer project root by looking for package.json
-        let projectRoot = path.dirname(filePath);
-        while (projectRoot !== path.dirname(projectRoot)) {
-            const packagePath = path.join(projectRoot, 'package.json');
-            try {
-                const packageContent = await fs.readFile(packagePath, 'utf-8');
-                if (packageContent.includes('"aksara-writer"')) {
-                    break;
-                }
-            } catch {}
-            projectRoot = path.dirname(projectRoot);
-        }
-
-        const cliPath = path.join(projectRoot, 'packages/cli/src/index.ts');
-        const command = `bun run "${cliPath}" convert "${filePath}" --format ${options.format}`;
+        // Use global aksara-writer CLI
+        const command = `aksara-writer convert "${filePath}" --format ${options.format}`;
 
         const { stdout, stderr } = await execAsync(command, { cwd: path.dirname(filePath) });
 
@@ -186,11 +319,14 @@ async function previewDocument(context?: vscode.ExtensionContext) {
             });
         }
 
-        // Inject document path information for image resolution
+        // Fix image paths for VS Code webview
+        let processedHtml = fixImagePathsInHtml(result.data!.toString(), document.fileName, globalPreviewPanel.webview);
+
+        // Inject document path information for additional JS processing
         const docUri = globalPreviewPanel.webview.asWebviewUri(vscode.Uri.file(document.fileName));
         const docDir = globalPreviewPanel.webview.asWebviewUri(vscode.Uri.file(path.dirname(document.fileName)));
 
-        const htmlWithInjectedPath = result.data!.toString().replace(
+        const htmlWithInjectedPath = processedHtml.replace(
             '<body>',
             `<body>
             <script>
@@ -217,11 +353,12 @@ async function previewDocument(context?: vscode.ExtensionContext) {
                         }
                         const updatedResult = await convertWithCli(activeEditor.document.fileName, options);
                         if (updatedResult.success) {
-                            // Inject document path information
+                            // Fix image paths and inject document path information
+                            let processedHtml = fixImagePathsInHtml(updatedResult.data!.toString(), activeEditor.document.fileName, globalPreviewPanel.webview);
                             const docUri = globalPreviewPanel.webview.asWebviewUri(vscode.Uri.file(activeEditor.document.fileName));
                             const docDir = globalPreviewPanel.webview.asWebviewUri(vscode.Uri.file(path.dirname(activeEditor.document.fileName)));
 
-                            const htmlWithPaths = updatedResult.data!.toString().replace(
+                            const htmlWithPaths = processedHtml.replace(
                                 '<body>',
                                 `<body>
                                 <script>
@@ -234,8 +371,9 @@ async function previewDocument(context?: vscode.ExtensionContext) {
                             globalPreviewPanel.webview.html = htmlWithPaths;
                         }
                     } else {
-                        // Hide or close preview for non-Aksara documents
-                        globalPreviewPanel.dispose();
+                        // Show message for non-Aksara documents instead of closing
+                        globalPreviewPanel.title = `Preview: ${path.basename(activeEditor.document.fileName)} (No Aksara)`;
+                        globalPreviewPanel.webview.html = getNoAksaraHtml(path.basename(activeEditor.document.fileName));
                     }
                 }
             });
@@ -253,11 +391,12 @@ async function previewDocument(context?: vscode.ExtensionContext) {
                             }
                             const updatedResult = await convertWithCli(event.document.fileName, options);
                             if (updatedResult.success) {
-                                // Inject document path information
+                                // Fix image paths and inject document path information
+                                let processedHtml = fixImagePathsInHtml(updatedResult.data!.toString(), event.document.fileName, globalPreviewPanel.webview);
                                 const docUri = globalPreviewPanel.webview.asWebviewUri(vscode.Uri.file(event.document.fileName));
                                 const docDir = globalPreviewPanel.webview.asWebviewUri(vscode.Uri.file(path.dirname(event.document.fileName)));
 
-                                const htmlWithPaths = updatedResult.data!.toString().replace(
+                                const htmlWithPaths = processedHtml.replace(
                                     '<body>',
                                     `<body>
                                     <script>
@@ -270,8 +409,9 @@ async function previewDocument(context?: vscode.ExtensionContext) {
                                 globalPreviewPanel.webview.html = htmlWithPaths;
                             }
                         } else {
-                            // Close preview if Aksara directive is removed
-                            globalPreviewPanel.dispose();
+                            // Show message if Aksara directive is removed instead of closing
+                            globalPreviewPanel.title = `Preview: ${path.basename(event.document.fileName)} (No Aksara)`;
+                            globalPreviewPanel.webview.html = getNoAksaraHtml(path.basename(event.document.fileName));
                         }
                     }
                 }

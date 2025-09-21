@@ -578,7 +578,7 @@ class AksaraConverter {
             .replace(/^(\d+)\. (.*$)/gm, '<li>$2</li>')
             // Images with positioning support: ![image x:10% y:10% w:50% h:auto](path)
             .replace(/!\[image([^\]]*)\]\(([^)]+)\)/g, (match, attrs, src) => {
-            let style = 'max-width: 100%; height: auto; margin: 1rem 0;';
+            let style = 'max-width: 100%; height: auto;';
             let cssClass = '';
             if (attrs.trim()) {
                 // Check for background placement
@@ -607,7 +607,7 @@ class AksaraConverter {
             return `<img src="${src}" alt="image" style="${style}" class="${cssClass}">`;
         })
             // Standard images: ![alt text](path)
-            .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; height: auto; margin: 1rem 0;">')
+            .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width: 100%;">')
             // Links (Indonesian-friendly)
             .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
             // Tables (simplified)
@@ -1102,7 +1102,6 @@ class AksaraConverter {
 
         function updateZoom() {
             document.querySelector('.aksara-document').style.transform = \`scale(\${currentZoom})\`;
-            document.querySelector('.aksara-document').style.transformOrigin = 'top center';
         }
 
         function updatePageIndicator() {
@@ -1279,23 +1278,27 @@ class AksaraConverter {
         overflow: hidden;
         padding: 0 !important;
         margin: 0 !important;
+        display: flex;
+        height: 100vh;
+        width: 100vw;
+        justify-content: center;
       }
 
       body[data-type="presentation"] .aksara-document {
         position: relative;
-        width: 100vw;
-        height: 97vh;
+        width: max-content;
+        height: max-content;
         overflow: hidden;
-        transform: translateY(10px);
+        aspect-ratio: 1.6;
       }
 
       body[data-type="presentation"] .document-footer {
-        position: fixed;
+        position: absolute;
         bottom: 0; left: .8em; right: .8em;
       }
 
       body[data-type="presentation"] .document-section {
-        position: absolute;
+        position: relative;
         top: 0;
         left: 0;
         width: 100vw;
@@ -1304,7 +1307,6 @@ class AksaraConverter {
         display: flex;
         flex-direction: column;
         opacity: 0;
-        transform: translateX(100%);
         transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.4s ease;
         overflow: visible !important;
         box-shadow: none !important;
