@@ -1,1 +1,65 @@
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" version="1.1" id="aksara" xml:space="preserve" style="zoom: 1;"><g id="g1"><path d="M181.48368,267.5455 l29.15117,12.75583 c-18.85821,40.44319 -10.89487,32.26643 -49.75676,33.03436  z " id="path1"></path><path d="M196.57071,230.58628 l44.15482,-19.62436 l31.72606,-70.64772 c-0.64105,-2.98343 -31.56787,-6.10792 -35.65093,2.28951  z " id="path2"></path><path d="M314.578491,229.866653 l-42.76485,-18.82305 l-15.634,-34.34264 l16.27195,-36.38676 c4.24774,1.34076 28.23177,59.75069 42.1269,89.55245  z " id="path3" fill="#477ebe"></path><path d="M301.792999,280.301331 l29.2046,-13.08291 l20.18338,46.11725 c-35.58445,-2.8242 -31.45627,10.8451 -49.38798,-33.03434  z " id="path4" fill="#477fbe"></path><path d="M186.71709,248.18297 l0.23195,8.58202 l43.60598,19.71547 l0.92778,-10.9015 l-29.68917,-13.4529 l28.52944,-12.75707 l0.46389,-11.13345  z " id="path5"></path><path d="M280.887451,228.003601 l0.4639,12.06123 l28.52944,12.06123 l-29.22529,12.98901 l0.23195,11.59734 l43.83792,-19.94742 l0.4639,-8.81397  z " id="path6"></path><path d="M260.01225,216.17432 l15.07653,0.23194 l-25.51414,73.52711 h-15.54042  z " id="path7" fill="#4780be"></path><text xml:space="preserve" style="font-size:65.3335px;font-family:Montserrat;-inkscape-font-specification:'Montserrat, @wght=652';font-variation-settings:'wght' 652;fill:#373d43;fill-opacity:1;fill-rule:nonzero;stroke-width:3.36381" x="131.35284" y="408.87131" id="text8" transform="scale(1.0312527,0.96969444)"><tspan id="tspan8" x="131.35284" y="408.87131" style="stroke-width:3.36381">ak</tspan></text><text xml:space="preserve" style="font-size:60.7307px;font-family:Montserrat;-inkscape-font-specification:'Montserrat, @wght=652';font-variation-settings:'wght' 652;fill:#4781be;fill-opacity:1;fill-rule:nonzero;stroke-width:3.12683" x="207.16589" y="415.96631" id="text9" transform="scale(1.0516104,0.9509225)"><tspan id="tspan9" x="207.16589" y="415.96631" style="stroke-width:3.12683">'sara</tspan></text></g></svg>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="512"
+   height="512"
+   viewBox="0 0 512 512"
+   version="1.1"
+   id="aksara"
+   xml:space="preserve"
+   style="zoom: 1;"
+   sodipodi:docname="ak'sara.svg"
+   inkscape:version="1.3.2 (091e20e, 2023-11-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+   <rect
+     width="474"
+     height="474"
+     x="21"
+     y="21"
+     fill="#eeeeee"
+     id="rect1"
+     stroke-width="10"
+     stroke="#477fbe"
+     rx="8"
+     ry="8" /><g
+     id="g1"
+     transform="matrix(1.5772308,0,0,1.4928039,-136.19183,-137.02923)"><path
+       d="m 181.48368,267.5455 29.15117,12.75583 c -18.85821,40.44319 -10.89487,32.26643 -49.75676,33.03436 z"
+       id="path1" /><path
+       d="m 196.57071,230.58628 44.15482,-19.62436 31.72606,-70.64772 c -0.64105,-2.98343 -31.56787,-6.10792 -35.65093,2.28951 z"
+       id="path2" /><path
+       d="m 314.57849,229.86665 -42.76485,-18.82305 -15.634,-34.34264 16.27195,-36.38676 c 4.24774,1.34076 28.23177,59.75069 42.1269,89.55245 z"
+       id="path3"
+       fill="#477ebe" /><path
+       d="m 301.793,280.30133 29.2046,-13.08291 20.18338,46.11725 c -35.58445,-2.8242 -31.45627,10.8451 -49.38798,-33.03434 z"
+       id="path4"
+       fill="#477fbe" /><path
+       d="m 186.71709,248.18297 0.23195,8.58202 43.60598,19.71547 0.92778,-10.9015 -29.68917,-13.4529 28.52944,-12.75707 0.46389,-11.13345 z"
+       id="path5" /><path
+       d="m 280.88745,228.0036 0.4639,12.06123 28.52944,12.06123 -29.22529,12.98901 0.23195,11.59734 43.83792,-19.94742 0.4639,-8.81397 z"
+       id="path6" /><path
+       d="m 260.01225,216.17432 15.07653,0.23194 -25.51414,73.52711 h -15.54042 z"
+       id="path7"
+       fill="#4780be" /><text
+       xml:space="preserve"
+       style="font-size:65.3335px;font-family:Montserrat;-inkscape-font-specification:'Montserrat, @wght=652';font-variation-settings:'wght' 652;fill:#373d43;fill-opacity:1;fill-rule:nonzero;stroke-width:3.36381"
+       x="131.35284"
+       y="408.87131"
+       id="text8"
+       transform="scale(1.0312527,0.96969444)"><tspan
+         id="tspan8"
+         x="131.35284"
+         y="408.87131"
+         style="stroke-width:3.36381">ak</tspan></text><text
+       xml:space="preserve"
+       style="font-size:60.7307px;font-family:Montserrat;-inkscape-font-specification:'Montserrat, @wght=652';font-variation-settings:'wght' 652;fill:#4781be;fill-opacity:1;fill-rule:nonzero;stroke-width:3.12683"
+       x="207.16589"
+       y="415.96631"
+       id="text9"
+       transform="scale(1.0516104,0.9509225)"><tspan
+         id="tspan9"
+         x="207.16589"
+         y="415.96631"
+         style="stroke-width:3.12683">'sara</tspan></text></g></svg>
