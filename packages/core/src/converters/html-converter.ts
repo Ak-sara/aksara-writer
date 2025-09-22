@@ -76,7 +76,7 @@ export class HtmlConverter {
 
   private applyDocumentTheme(html: string): string {
     const theme = this.getDocumentTheme();
-    const customStyles = this.getCustomStyles();
+    const { customUserStyles, otherCustomStyles } = this.getSeparatedCustomStyles();
     const totalSections = this.sections.length;
     const isPresentation = this.directives.type === 'presentation';
 
@@ -90,9 +90,9 @@ export class HtmlConverter {
       locale: this.options.locale || 'id',
       title: this.metadata.title || 'Aksara Document',
       theme,
-      customStyles,
+      customStyles: otherCustomStyles, // size, background styles first
       presentationStyles: isPresentation ? this.getPresentationStyles() : '',
-      generalStyles: this.getGeneralStyles(),
+      generalStyles: this.getGeneralStyles() + '\n' + customUserStyles, // user CSS comes last
       documentType: isPresentation ? 'presentation' : 'document',
       controls: isPresentation ? this.getPresentationControls(totalSections) : this.getDocumentControls(totalSections),
       content: html,
@@ -134,16 +134,18 @@ export class HtmlConverter {
     return { width: 1280, height: 720 };
   }
 
-  private getCustomStyles(): string {
-    let styles = '';
+  private getSeparatedCustomStyles(): { customUserStyles: string; otherCustomStyles: string } {
+    let otherCustomStyles = '';
+    let customUserStyles = '';
 
+    // Add size and background styles first (these don't override theme styles)
     if (this.directives.size) {
-      styles += this.parseSizeDirective(this.directives.size);
+      otherCustomStyles += this.parseSizeDirective(this.directives.size);
     }
 
     if (this.directives.background) {
       const backgroundPath = this.convertImagePath(this.directives.background);
-      styles += `
+      otherCustomStyles += `
         .document-section {
           background-image: url(${backgroundPath}) !important;
           background-size: cover !important;
@@ -153,11 +155,38 @@ export class HtmlConverter {
       `;
     }
 
+    // Load user CSS file last (this should override theme styles)
     if (this.directives.style) {
-      styles += `/* Custom styles from: ${this.directives.style} */\n`;
+      try {
+        // Load custom CSS file - resolve relative to the document directory
+        let stylePath: string;
+        if (isAbsolute(this.directives.style)) {
+          stylePath = this.directives.style;
+        } else {
+          // For relative paths, resolve from current working directory
+          stylePath = resolve(process.cwd(), this.directives.style);
+        }
+
+        if (existsSync(stylePath)) {
+          const customCss = readFileSync(stylePath, 'utf-8');
+          customUserStyles += `\n/* Custom user styles from: ${this.directives.style} (applied last for highest priority) */\n${customCss}\n`;
+        } else {
+          console.warn(`Custom style file not found: ${this.directives.style} (resolved to: ${stylePath})`);
+          customUserStyles += `/* Custom style file not found: ${this.directives.style} */\n`;
+        }
+      } catch (error) {
+        console.warn(`Error loading custom style file ${this.directives.style}:`, error);
+        customUserStyles += `/* Error loading custom style file: ${this.directives.style} */\n`;
+      }
     }
 
-    return styles;
+    return { customUserStyles, otherCustomStyles };
+  }
+
+  // Keep the old method for backward compatibility
+  private getCustomStyles(): string {
+    const { customUserStyles, otherCustomStyles } = this.getSeparatedCustomStyles();
+    return otherCustomStyles + customUserStyles;
   }
 
   private parseSizeDirective(size: string): string {
@@ -210,7 +239,10 @@ export class HtmlConverter {
   }
 
   private markdownToHtml(markdown: string): string {
-    return markdown
+    // First, evaluate JavaScript expressions
+    const withEvaluatedJS = this.evaluateJavaScriptExpressions(markdown);
+
+    return withEvaluatedJS
       .replace(/^# (.*$)/gm, '<h1>$1</h1>')
       .replace(/^## (.*$)/gm, '<h2>$1</h2>')
       .replace(/^### (.*$)/gm, '<h3>$1</h3>')
@@ -258,6 +290,70 @@ export class HtmlConverter {
       .replace(/^(?!<[uh])/gm, '<p>')
       .replace(/(?<!>)$/gm, '</p>')
       .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+  }
+
+  private evaluateJavaScriptExpressions(text: string): string {
+    return text.replace(/\$\{([^}]+)\}/g, (match, expression) => {
+      try {
+        // Safely evaluate simple expressions
+        const result = this.safeEval(expression.trim());
+        return result !== undefined ? String(result) : match;
+      } catch (error) {
+        console.warn(`Failed to evaluate expression: ${expression}`, error);
+        return match; // Return original if evaluation fails
+      }
+    });
+  }
+
+  private safeEval(expression: string): any {
+    // Only allow safe expressions - primarily Date functions
+    if (expression.includes('new Date()')) {
+      // Handle date expressions
+      if (expression.includes('.toLocaleDateString(')) {
+        const match = expression.match(/new Date\(\)\.toLocaleDateString\(['"`]([^'"`]+)['"`]\)/);
+        if (match) {
+          const locale = match[1];
+          return new Date().toLocaleDateString(locale);
+        }
+        // Default locale
+        return new Date().toLocaleDateString();
+      }
+      if (expression.includes('.toDateString()')) {
+        return new Date().toDateString();
+      }
+      if (expression.includes('.getFullYear()')) {
+        return new Date().getFullYear();
+      }
+    }
+
+    // Handle Date constructor with offset (like due dates)
+    if (expression.includes('new Date(Date.now()')) {
+      const match = expression.match(/new Date\(Date\.now\(\)\s*([+\-])\s*([^)]+)\)\.toLocaleDateString\(['"`]([^'"`]+)['"`]\)/);
+      if (match) {
+        const operator = match[1];
+        const offsetExpr = match[2].trim();
+        const locale = match[3];
+
+        // Safely evaluate simple math expressions for date offset
+        if (/^[\d\s+\-*/().]+$/.test(offsetExpr)) {
+          const offset = Function(`"use strict"; return (${offsetExpr})`)();
+          const dateMs = operator === '+' ? Date.now() + offset : Date.now() - offset;
+          return new Date(dateMs).toLocaleDateString(locale);
+        }
+      }
+    }
+
+    // Handle simple math and string operations
+    if (/^[\d\s+\-*/().]+$/.test(expression)) {
+      return Function(`"use strict"; return (${expression})`)();
+    }
+
+    // Handle simple string concatenation
+    if (expression.includes('+') && (expression.includes('"') || expression.includes("'"))) {
+      return Function(`"use strict"; return (${expression})`)();
+    }
+
+    throw new Error(`Unsafe expression: ${expression}`);
   }
 
   private convertImagePath(imagePath: string): string {

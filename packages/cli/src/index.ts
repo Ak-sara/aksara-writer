@@ -12,6 +12,22 @@ import { AksaraConverter, ConvertOptions } from 'aksara-writer-core';
 import { readFile, writeFile } from 'fs/promises';
 import { extname, basename, resolve } from 'path';
 
+/**
+ * Read input from stdin
+ */
+async function readStdin(): Promise<string> {
+  return new Promise((resolve) => {
+    let data = '';
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', (chunk) => {
+      data += chunk;
+    });
+    process.stdin.on('end', () => {
+      resolve(data);
+    });
+  });
+}
+
 const program = new Command();
 
 program
@@ -22,7 +38,7 @@ program
 program
   .command('convert')
   .description('Convert markdown file to specified format')
-  .argument('<input>', 'Input markdown file')
+  .argument('<input>', 'Input markdown file (use "-" for stdin)')
   .option('-f, --format <format>', 'Output format (html, pdf, pptx)', 'html')
   .option('-o, --output <output>', 'Output file path')
   .option('-t, --theme <theme>', 'Document theme', 'default')
@@ -30,13 +46,28 @@ program
   .option('--locale <locale>', 'Document locale (id, en)', 'id')
   .option('--page-size <size>', 'Page size (A4, Letter, Legal)', 'A4')
   .option('--orientation <orientation>', 'Page orientation (portrait, landscape)', 'portrait')
+  .option('--stdout', 'Output to stdout instead of file (for live preview)')
   .action(async (input: string, options) => {
-    const spinner = ora('Converting document...').start();
+    const isStdin = input === '-';
+    const useStdout = options.stdout;
+
+    // Only show spinner for file operations, not stdin/stdout
+    const spinner = (!isStdin && !useStdout) ? ora('Converting document...').start() : null;
 
     try {
-      // Read input file
-      const inputPath = resolve(input);
-      const markdown = await readFile(inputPath, 'utf-8');
+      // Read input - either from file or stdin
+      let markdown: string;
+      let inputPath: string;
+
+      if (isStdin) {
+        // Read from stdin for live preview
+        markdown = await readStdin();
+        inputPath = process.cwd(); // Use current directory for relative paths
+      } else {
+        // Read from file for normal operation
+        inputPath = resolve(input);
+        markdown = await readFile(inputPath, 'utf-8');
+      }
 
       // Prepare conversion options
       const convertOptions: ConvertOptions = {
@@ -55,25 +86,28 @@ program
       const result = await converter.convert(markdown);
 
       if (!result.success) {
-        spinner.fail(chalk.red('Conversion failed'));
+        if (spinner) spinner.fail(chalk.red('Conversion failed'));
         console.error(chalk.red(`Error: ${result.error}`));
         process.exit(1);
       }
 
-      // Determine output path
-      const outputPath = options.output || getDefaultOutputPath(input, options.format);
+      if (useStdout) {
+        // Output to stdout for live preview
+        process.stdout.write(result.data!.toString());
+      } else {
+        // Write to file for normal operation
+        const outputPath = options.output || getDefaultOutputPath(input, options.format);
+        await writeFile(outputPath, result.data!);
 
-      // Write output file
-      await writeFile(outputPath, result.data!);
-
-      spinner.succeed(chalk.green(`Document converted successfully`));
-      console.log(chalk.blue(`Input:  ${inputPath}`));
-      console.log(chalk.blue(`Output: ${resolve(outputPath)}`));
-      console.log(chalk.blue(`Format: ${options.format.toUpperCase()}`));
-      console.log(chalk.blue(`Locale: ${options.locale}`));
+        if (spinner) spinner.succeed(chalk.green(`Document converted successfully`));
+        console.log(chalk.blue(`Input:  ${inputPath}`));
+        console.log(chalk.blue(`Output: ${resolve(outputPath)}`));
+        console.log(chalk.blue(`Format: ${options.format.toUpperCase()}`));
+        console.log(chalk.blue(`Locale: ${options.locale}`));
+      }
 
     } catch (error) {
-      spinner.fail(chalk.red('Conversion failed'));
+      if (spinner) spinner.fail(chalk.red('Conversion failed'));
       console.error(chalk.red(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`));
       process.exit(1);
     }

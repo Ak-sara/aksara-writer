@@ -80,7 +80,7 @@ export class AksaraConverter {
         const trimmed = line.trim();
         if (!trimmed) return;
 
-        if (trimmed === 'aksara:true') {
+        if (trimmed.startsWith('aksara:') && trimmed.replace('aksara:', '').trim() === 'true') {
           directives.aksara = true;
         } else if (trimmed.startsWith('type:')) {
           directives.type = trimmed.replace('type:', '').trim() as 'document' | 'presentation';
@@ -132,8 +132,11 @@ export class AksaraConverter {
    * Enhanced markdown to HTML converter with Indonesian support
    */
   private markdownToHtml(markdown: string): string {
-    // First parse tables
-    let html = this.parseTable(markdown);
+    // First, evaluate JavaScript expressions before any other processing
+    let html = this.evaluateJavaScriptExpressions(markdown);
+
+    // Then parse tables
+    html = this.parseTable(html);
 
     // Process code blocks first (before other block elements)
     html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
@@ -256,6 +259,70 @@ export class AksaraConverter {
       result = result.replace(new RegExp(`{{${key}}}`, 'g'), value);
     }
     return result;
+  }
+
+  private evaluateJavaScriptExpressions(text: string): string {
+    return text.replace(/\$\{([^}]+)\}/g, (match, expression) => {
+      try {
+        // Safely evaluate simple expressions
+        const result = this.safeEval(expression.trim());
+        return result !== undefined ? String(result) : match;
+      } catch (error) {
+        console.warn(`Failed to evaluate expression: ${expression}`, error);
+        return match; // Return original if evaluation fails
+      }
+    });
+  }
+
+  private safeEval(expression: string): any {
+    // Only allow safe expressions - primarily Date functions
+    if (expression.includes('new Date()')) {
+      // Handle date expressions
+      if (expression.includes('.toLocaleDateString(')) {
+        const match = expression.match(/new Date\(\)\.toLocaleDateString\(['"`]([^'"`]+)['"`]\)/);
+        if (match) {
+          const locale = match[1];
+          return new Date().toLocaleDateString(locale);
+        }
+        // Default locale
+        return new Date().toLocaleDateString();
+      }
+      if (expression.includes('.toDateString()')) {
+        return new Date().toDateString();
+      }
+      if (expression.includes('.getFullYear()')) {
+        return new Date().getFullYear();
+      }
+    }
+
+    // Handle Date constructor with offset (like due dates)
+    if (expression.includes('new Date(Date.now()')) {
+      const match = expression.match(/new Date\(Date\.now\(\)\s*([+\-])\s*([^)]+)\)\.toLocaleDateString\(['"`]([^'"`]+)['"`]\)/);
+      if (match) {
+        const operator = match[1];
+        const offsetExpr = match[2].trim();
+        const locale = match[3];
+
+        // Safely evaluate simple math expressions for date offset
+        if (/^[\d\s+\-*/().]+$/.test(offsetExpr)) {
+          const offset = Function(`"use strict"; return (${offsetExpr})`)();
+          const dateMs = operator === '+' ? Date.now() + offset : Date.now() - offset;
+          return new Date(dateMs).toLocaleDateString(locale);
+        }
+      }
+    }
+
+    // Handle simple math and string operations
+    if (/^[\d\s+\-*/().]+$/.test(expression)) {
+      return Function(`"use strict"; return (${expression})`)();
+    }
+
+    // Handle simple string concatenation
+    if (expression.includes('+') && (expression.includes('"') || expression.includes("'"))) {
+      return Function(`"use strict"; return (${expression})`)();
+    }
+
+    throw new Error(`Unsafe expression: ${expression}`);
   }
 
   /**

@@ -33,7 +33,13 @@ function initializePresentation() {
 
 function initializeDocument() {
   // Document mode initialization
-  updatePageIndicator();
+  // Set initial page to 1 before calculating from scroll position
+  const pageIndicator = document.getElementById('current-page');
+  if (pageIndicator) {
+    pageIndicator.textContent = '1';
+  }
+  // Then update based on scroll position after a brief delay
+  setTimeout(updatePageIndicator, 100);
 }
 
 function setupControls() {
@@ -223,9 +229,16 @@ function updatePageIndicator() {
   });
 
   currentSlide = currentPage - 1;
-  const indicator = document.getElementById('current-slide');
-  if (indicator) {
-    indicator.textContent = currentPage.toString();
+
+  // Update the appropriate indicator based on document type
+  const slideIndicator = document.getElementById('current-slide');
+  const pageIndicator = document.getElementById('current-page');
+
+  if (slideIndicator) {
+    slideIndicator.textContent = currentPage.toString();
+  }
+  if (pageIndicator) {
+    pageIndicator.textContent = currentPage.toString();
   }
 }
 
@@ -276,10 +289,31 @@ document.addEventListener('fullscreenchange', () => {
 });
 
 // Initialize on load
+function initializeAksara() {
+  const isPresentation = document.body.dataset.type === 'presentation';
+
+  if (isPresentation) {
+    // Presentation mode: ensure slide indicator shows 1
+    const slideIndicator = document.getElementById('current-slide');
+    if (slideIndicator) {
+      slideIndicator.textContent = '1';
+    }
+    currentSlide = 0;
+    updateSlideIndicator();
+  } else {
+    // Document mode: ensure page indicator shows 1
+    const pageIndicator = document.getElementById('current-page');
+    if (pageIndicator) {
+      pageIndicator.textContent = '1';
+    }
+    setTimeout(updatePageIndicator, 100);
+  }
+}
+
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', updatePageIndicator);
+  document.addEventListener('DOMContentLoaded', initializeAksara);
 } else {
-  updatePageIndicator();
+  initializeAksara();
 }
 
 // End of initializeAksaraDocument function

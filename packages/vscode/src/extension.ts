@@ -4,15 +4,30 @@
  */
 
 import * as vscode from 'vscode';
-// import { AksaraConverter, ConvertOptions } from '../../core/src/index';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { readFileSync, existsSync, readdirSync } from 'fs';
+import { readFile } from 'fs/promises';
+import { join, basename, extname, dirname } from 'path';
+import * as path from 'path';
+
+// Define types locally to avoid import issues
+interface ConvertOptions {
+    format: 'html' | 'pdf' | 'pptx';
+    locale?: 'id' | 'en';
+    theme?: string;
+    pageSize?: 'A4' | 'Letter' | 'Legal';
+    orientation?: 'portrait' | 'landscape';
+}
 
 const execAsync = promisify(exec);
 
 // Global reference to the single preview panel
 let globalPreviewPanel: vscode.WebviewPanel | undefined;
 let previewSubscriptions: vscode.Disposable[] = [];
+
+// Debouncing for live preview updates
+let previewUpdateTimeout: NodeJS.Timeout | undefined;
 
 /**
  * Fix image paths in HTML for VS Code webview
@@ -135,20 +150,20 @@ function getNoAksaraHtml(fileName: string): string {
         <div class="instructions">
             <h3>🔧 To enable Aksara Writer preview:</h3>
             <p>Add the following directive to the top of your markdown file:</p>
-            <div class="code-block"><!--
+            <pre class="code-block">\<!--
 aksara:true
 type: document
--->
+--\>
 
-# Your Content Here</div>
+# Your Content Here</pre>
             <p><strong>For presentations:</strong></p>
-            <div class="code-block"><!--
+            <pre class="code-block">\<!--
 aksara:true
 type: presentation
 size: 16:9
--->
+--\>
 
-# Your Presentation</div>
+# Your Presentation</pre>
         </div>
 
         <div class="note">
@@ -166,16 +181,206 @@ interface ConvertOptions {
     theme?: string;
     pageSize?: 'A4' | 'Letter' | 'Legal';
 }
-import * as path from 'path';
-import * as fs from 'fs/promises';
 
 /**
- * Convert document using Aksara CLI
+ * Convert markdown to HTML using CLI via stdin/stdout (live preview)
+ */
+async function convertToHtmlInMemory(markdown: string): Promise<string> {
+    try {
+        // Use CLI with stdin/stdout for live preview (no file I/O)
+        const command = 'aksara-writer convert - --format html --stdout --locale id';
+
+        const { spawn } = await import('child_process');
+
+        return new Promise((resolve, reject) => {
+            const child = spawn('bash', ['-c', command], {
+                stdio: ['pipe', 'pipe', 'pipe']
+            });
+
+            let stdout = '';
+            let stderr = '';
+
+            child.stdout.on('data', (data) => {
+                stdout += data.toString();
+            });
+
+            child.stderr.on('data', (data) => {
+                stderr += data.toString();
+            });
+
+            child.on('close', (code) => {
+                if (code === 0) {
+                    resolve(stdout);
+                } else {
+                    console.warn('CLI conversion failed:', stderr);
+                    reject(new Error(`CLI failed with code ${code}: ${stderr}`));
+                }
+            });
+
+            child.on('error', (error) => {
+                console.warn('CLI spawn error:', error);
+                reject(error);
+            });
+
+            // Send markdown to CLI via stdin
+            child.stdin.write(markdown);
+            child.stdin.end();
+        });
+    } catch (error) {
+        console.warn('CLI converter failed, falling back to simple converter:', error);
+        return convertToHtmlSimple(markdown);
+    }
+}
+
+/**
+ * Fallback simple converter (backup when core fails)
+ */
+function convertToHtmlSimple(markdown: string): string {
+    // Basic markdown to HTML conversion for preview
+    let html = markdown;
+
+    // Process JavaScript expressions first
+    html = html.replace(/\$\{([^}]+)\}/g, (match, expression) => {
+        try {
+            if (expression.includes('new Date()')) {
+                if (expression.includes('.toLocaleDateString(')) {
+                    const localeMatch = expression.match(/\.toLocaleDateString\(['"](.*?)['"]\)/);
+                    const locale = localeMatch ? localeMatch[1] : 'id-ID';
+                    return new Date().toLocaleDateString(locale);
+                }
+                if (expression.includes('.getFullYear()')) {
+                    return new Date().getFullYear().toString();
+                }
+            }
+            if (expression.includes('Date.now()')) {
+                const offsetMatch = expression.match(/Date\.now\(\)\s*([+\-])\s*(.+?)\)\.toLocaleDateString/);
+                if (offsetMatch) {
+                    const operator = offsetMatch[1];
+                    const offsetMs = eval(offsetMatch[2]); // Safe for simple math
+                    const dateMs = operator === '+' ? Date.now() + offsetMs : Date.now() - offsetMs;
+                    return new Date(dateMs).toLocaleDateString('id-ID');
+                }
+            }
+            return match;
+        } catch {
+            return match;
+        }
+    });
+
+    // Remove Aksara directives
+    html = html.replace(/<!--[\s\S]*?-->/g, '');
+
+    // Convert markdown to HTML
+    html = html
+        // Headers
+        .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+        .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+        .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+        .replace(/^#### (.*$)/gm, '<h4>$1</h4>')
+
+        // Bold and italic
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+
+        // Code
+        .replace(/`(.*?)`/g, '<code>$1</code>')
+
+        // Lists
+        .replace(/^- (.*$)/gm, '<li>$1</li>')
+        .replace(/^(\d+)\. (.*$)/gm, '<li>$2</li>')
+
+        // Images
+        .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; height: auto;">')
+
+        // Links
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+
+        // Horizontal rules
+        .replace(/^---$/gm, '<hr>');
+
+    // Process tables
+    html = html.replace(/^\|(.+)\|\s*\n\|[-\s|:]+\|\s*\n((?:\|.+\|\s*\n?)*)/gm, (match, headerRow, bodyRows) => {
+        const headers = headerRow.split('|').map((h: string) => h.trim()).filter((h: string) => h);
+        const rows = bodyRows.trim().split('\n').map((row: string) =>
+            row.split('|').map((cell: string) => cell.trim()).filter((cell: string) => cell)
+        );
+
+        const headerHtml = headers.map((h: string) => `<th>${h}</th>`).join('');
+        const bodyHtml = rows.map((row: string[]) =>
+            `<tr>${row.map((cell: string) => `<td>${cell}</td>`).join('')}</tr>`
+        ).join('');
+
+        return `<table style="border-collapse: collapse; width: 100%;"><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table>`;
+    });
+
+    // Wrap list items in ul tags
+    html = html.replace(/(<li>.*?<\/li>\s*)+/g, (match) => {
+        return `<ul>${match}</ul>`;
+    });
+
+    // Convert line breaks to paragraphs
+    const lines = html.split('\n');
+    const processedLines: string[] = [];
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed === '') continue;
+
+        // Don't wrap block elements
+        if (trimmed.match(/^<(h[1-6]|ul|ol|li|table|div|hr|img)/)) {
+            processedLines.push(trimmed);
+        } else if (trimmed.match(/^<\/?(h[1-6]|ul|ol|li|table|div|hr)/)) {
+            processedLines.push(trimmed);
+        } else {
+            processedLines.push(`<p>${trimmed}</p>`);
+        }
+    }
+
+    // Add basic CSS
+    const styledHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aksara Preview</title>
+    <style>
+        body {
+            font-family: 'Inter', 'Segoe UI', 'Noto Sans', sans-serif;
+            line-height: 1.6;
+            color: #2c3e50;
+            max-width: 21cm;
+            margin: 0 auto;
+            padding: 2rem;
+            background: white;
+        }
+        h1 { color: #2c3e50; border-bottom: 3px solid #667eea; padding-bottom: 0.5rem; }
+        h2, h3, h4 { color: #34495e; }
+        table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+        th, td { border: 1px solid #bdc3c7; padding: 0.75rem; text-align: left; }
+        th { background: #34495e; color: white; font-weight: 600; }
+        tr:nth-child(even) { background: #f8f9fa; }
+        code { background: #ecf0f1; padding: 0.2rem 0.4rem; border-radius: 3px; }
+        ul { padding-left: 1.5rem; }
+        li { margin: 0.5rem 0; }
+        hr { border: none; border-top: 2px solid #ecf0f1; margin: 2rem 0; }
+    </style>
+</head>
+<body>
+    ${processedLines.join('\n')}
+</body>
+</html>`;
+
+    return styledHtml;
+}
+
+/**
+ * Convert document using Aksara CLI (for file exports) - original approach
  */
 async function convertWithCli(filePath: string, options: ConvertOptions): Promise<{success: boolean, data?: string, error?: string}> {
     try {
-        // Use global aksara-writer CLI
-        const command = `aksara-writer convert "${filePath}" --format ${options.format}`;
+        // Use global aksara-writer CLI (file-based conversion)
+        const command = `aksara-writer convert "${filePath}" --format ${options.format} --locale ${options.locale || 'id'}`;
 
         const { stdout, stderr } = await execAsync(command, { cwd: path.dirname(filePath) });
 
@@ -188,7 +393,7 @@ async function convertWithCli(filePath: string, options: ConvertOptions): Promis
         if (options.format === 'html') {
             const outputPath = filePath.replace(/\.md$/, '.html');
             try {
-                const htmlContent = await fs.readFile(outputPath, 'utf-8');
+                const htmlContent = await readFile(outputPath, 'utf-8');
                 return { success: true, data: htmlContent };
             } catch (readError) {
                 return { success: false, error: `Could not read HTML output: ${readError}` };
@@ -288,11 +493,12 @@ async function previewDocument(context?: vscode.ExtensionContext) {
             pageSize: config.get<'A4' | 'Letter' | 'Legal'>('defaultPageSize', 'A4')
         };
 
-        // Use CLI to convert document
-        const result = await convertWithCli(document.fileName, options);
+        // Use core-based in-memory conversion for WYSIWYG preview
+        const htmlContent = await convertToHtmlInMemory(markdown);
+        const result = { success: true, data: htmlContent };
 
         if (!result.success) {
-            vscode.window.showErrorMessage(`Failed to create preview: ${result.error}`);
+            vscode.window.showErrorMessage(`Failed to create preview: Unknown error`);
             return;
         }
 
@@ -319,8 +525,22 @@ async function previewDocument(context?: vscode.ExtensionContext) {
             });
         }
 
-        // Fix image paths for VS Code webview
+        // Fix image paths for VS Code webview (but preserve base64 data URLs)
         let processedHtml = fixImagePathsInHtml(result.data!.toString(), document.fileName, globalPreviewPanel.webview);
+
+        // Add Content Security Policy to allow data URLs for images
+        if (!processedHtml.includes('content-security-policy')) {
+            processedHtml = processedHtml.replace(
+                '<head>',
+                `<head>
+                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data: vscode-webview-resource: https:; script-src 'unsafe-inline'; style-src 'unsafe-inline';">`
+            );
+        }
+
+        // Debug: Log if we have base64 images
+        if (processedHtml.includes('data:image/')) {
+            console.log('VS Code: Found base64 images in HTML');
+        }
 
         // Inject document path information for additional JS processing
         const docUri = globalPreviewPanel.webview.asWebviewUri(vscode.Uri.file(document.fileName));
@@ -347,29 +567,35 @@ async function previewDocument(context?: vscode.ExtensionContext) {
                 if (activeEditor && activeEditor.document.languageId === 'markdown' && globalPreviewPanel) {
                     const markdown = activeEditor.document.getText();
                     if (markdown.includes('aksara:true') || markdown.includes('data-aksara')) {
-                        // Save document and re-convert
-                        if (activeEditor.document.isDirty) {
-                            await activeEditor.document.save();
-                        }
-                        const updatedResult = await convertWithCli(activeEditor.document.fileName, options);
-                        if (updatedResult.success) {
-                            // Fix image paths and inject document path information
-                            let processedHtml = fixImagePathsInHtml(updatedResult.data!.toString(), activeEditor.document.fileName, globalPreviewPanel.webview);
-                            const docUri = globalPreviewPanel.webview.asWebviewUri(vscode.Uri.file(activeEditor.document.fileName));
-                            const docDir = globalPreviewPanel.webview.asWebviewUri(vscode.Uri.file(path.dirname(activeEditor.document.fileName)));
+                        // Use core-based in-memory conversion
+                        const htmlContent = await convertToHtmlInMemory(markdown);
 
-                            const htmlWithPaths = processedHtml.replace(
-                                '<body>',
-                                `<body>
-                                <script>
-                                    window.documentUri = '${docUri}';
-                                    window.documentDir = '${docDir}';
-                                </script>`
+                        // Fix image paths and inject document path information
+                        let processedHtml = fixImagePathsInHtml(htmlContent, activeEditor.document.fileName, globalPreviewPanel.webview);
+
+                        // Add Content Security Policy to allow data URLs for images
+                        if (!processedHtml.includes('content-security-policy')) {
+                            processedHtml = processedHtml.replace(
+                                '<head>',
+                                `<head>
+                                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data: vscode-webview-resource: https:; script-src 'unsafe-inline'; style-src 'unsafe-inline';">`
                             );
-
-                            globalPreviewPanel.title = `Preview: ${path.basename(activeEditor.document.fileName)}`;
-                            globalPreviewPanel.webview.html = htmlWithPaths;
                         }
+
+                        const docUri = globalPreviewPanel.webview.asWebviewUri(vscode.Uri.file(activeEditor.document.fileName));
+                        const docDir = globalPreviewPanel.webview.asWebviewUri(vscode.Uri.file(path.dirname(activeEditor.document.fileName)));
+
+                        const htmlWithPaths = processedHtml.replace(
+                            '<body>',
+                            `<body>
+                            <script>
+                                window.documentUri = '${docUri}';
+                                window.documentDir = '${docDir}';
+                            </script>`
+                        );
+
+                        globalPreviewPanel.title = `Preview: ${path.basename(activeEditor.document.fileName)}`;
+                        globalPreviewPanel.webview.html = htmlWithPaths;
                     } else {
                         // Show message for non-Aksara documents instead of closing
                         globalPreviewPanel.title = `Preview: ${path.basename(activeEditor.document.fileName)} (No Aksara)`;
@@ -378,23 +604,37 @@ async function previewDocument(context?: vscode.ExtensionContext) {
                 }
             });
 
-            // Update preview when document changes
+            // Update preview when document changes (with debouncing)
             const changeSubscription = vscode.workspace.onDidChangeTextDocument(async event => {
                 if (event.document.languageId === 'markdown' && globalPreviewPanel) {
                     const activeEditor = vscode.window.activeTextEditor;
                     if (activeEditor && event.document === activeEditor.document) {
-                        const markdown = event.document.getText();
-                        if (markdown.includes('aksara:true') || markdown.includes('data-aksara')) {
-                            // Save document and re-convert
-                            if (event.document.isDirty) {
-                                await event.document.save();
-                            }
-                            const updatedResult = await convertWithCli(event.document.fileName, options);
-                            if (updatedResult.success) {
+                        // Clear previous timeout
+                        if (previewUpdateTimeout) {
+                            clearTimeout(previewUpdateTimeout);
+                        }
+
+                        // Debounce updates to avoid too many renders
+                        previewUpdateTimeout = setTimeout(async () => {
+                            const markdown = event.document.getText();
+                            if (markdown.includes('aksara:true') || markdown.includes('data-aksara')) {
+                                // Use core-based in-memory conversion
+                                const htmlContent = await convertToHtmlInMemory(markdown);
+
                                 // Fix image paths and inject document path information
-                                let processedHtml = fixImagePathsInHtml(updatedResult.data!.toString(), event.document.fileName, globalPreviewPanel.webview);
-                                const docUri = globalPreviewPanel.webview.asWebviewUri(vscode.Uri.file(event.document.fileName));
-                                const docDir = globalPreviewPanel.webview.asWebviewUri(vscode.Uri.file(path.dirname(event.document.fileName)));
+                                let processedHtml = fixImagePathsInHtml(htmlContent, event.document.fileName, globalPreviewPanel!.webview);
+
+                                // Add Content Security Policy to allow data URLs for images
+                                if (!processedHtml.includes('content-security-policy')) {
+                                    processedHtml = processedHtml.replace(
+                                        '<head>',
+                                        `<head>
+                                        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data: vscode-webview-resource: https:; script-src 'unsafe-inline'; style-src 'unsafe-inline';">`
+                                    );
+                                }
+
+                                const docUri = globalPreviewPanel!.webview.asWebviewUri(vscode.Uri.file(event.document.fileName));
+                                const docDir = globalPreviewPanel!.webview.asWebviewUri(vscode.Uri.file(path.dirname(event.document.fileName)));
 
                                 const htmlWithPaths = processedHtml.replace(
                                     '<body>',
@@ -405,14 +645,14 @@ async function previewDocument(context?: vscode.ExtensionContext) {
                                     </script>`
                                 );
 
-                                globalPreviewPanel.title = `Preview: ${path.basename(event.document.fileName)}`;
-                                globalPreviewPanel.webview.html = htmlWithPaths;
+                                globalPreviewPanel!.title = `Ak'sara: ${path.basename(event.document.fileName)}`;
+                                globalPreviewPanel!.webview.html = htmlWithPaths;
+                            } else {
+                                // Show message if Aksara directive is removed instead of closing
+                                globalPreviewPanel!.title = `Ak'sara: ${path.basename(event.document.fileName)} (No Aksara)`;
+                                globalPreviewPanel!.webview.html = getNoAksaraHtml(path.basename(event.document.fileName));
                             }
-                        } else {
-                            // Show message if Aksara directive is removed instead of closing
-                            globalPreviewPanel.title = `Preview: ${path.basename(event.document.fileName)} (No Aksara)`;
-                            globalPreviewPanel.webview.html = getNoAksaraHtml(path.basename(event.document.fileName));
-                        }
+                        }, 300); // 300ms debounce
                     }
                 }
             });
@@ -470,7 +710,7 @@ async function exportDocument(format: 'pdf' | 'pptx' | 'html') {
             // Save document first
             await document.save();
 
-            // Use CLI to convert
+            // Use CLI to convert (file-based export)
             const result = await convertWithCli(document.fileName, options);
 
             if (!result.success) {
@@ -507,34 +747,39 @@ async function exportDocument(format: 'pdf' | 'pptx' | 'html') {
  * Insert template into current document
  */
 async function insertTemplate() {
-    const templates = [
-        { label: '📄 Default - General Document', value: 'default' },
-        { label: '🧾 Invoice - Sales Invoice', value: 'invoice' },
-        { label: '📋 Proposal - Business Proposal', value: 'proposal' },
-        { label: '📊 Report - Business Report', value: 'report' },
-        { label: '📝 Contract - Legal Contract', value: 'contract' },
-        { label: '📮 Letter - Official Letter', value: 'letter' }
-    ];
+    const templates = getAvailableTemplates();
 
-    const selected = await vscode.window.showQuickPick(templates, {
+    if (templates.length === 0) {
+        vscode.window.showErrorMessage('No templates found');
+        return;
+    }
+
+    const templateOptions = templates.map(template => ({
+        label: `${template.icon} ${template.title}`,
+        value: template.name
+    }));
+
+    const selected = await vscode.window.showQuickPick(templateOptions, {
         placeHolder: 'Select document template'
     });
 
     if (!selected) return;
 
     const editor = vscode.window.activeTextEditor;
+    const templateContent = getTemplateContent(selected.value);
+
     if (!editor) {
         // Create new file
         const doc = await vscode.workspace.openTextDocument({
             language: 'markdown',
-            content: getTemplateContent(selected.value)
+            content: templateContent
         });
         await vscode.window.showTextDocument(doc);
     } else {
         // Insert into current document
         const position = editor.selection.active;
         await editor.edit(editBuilder => {
-            editBuilder.insert(position, getTemplateContent(selected.value));
+            editBuilder.insert(position, templateContent);
         });
     }
 }
@@ -563,17 +808,81 @@ async function changeTheme() {
 }
 
 /**
- * Get template content
+ * Get available templates from the templates directory
  */
-function getTemplateContent(template: string): string {
-    const templates = {
-        default: `---
-title: "Dokumen Bisnis"
-author: "Nama Penulis"
-subject: "Dokumen Professional"
-locale: id
-pageSize: A4
----
+function getAvailableTemplates(): Array<{name: string, title: string, icon: string}> {
+    try {
+        const extensionPath = vscode.extensions.getExtension('ak-sara.aksara-writer-vscode')?.extensionPath;
+        if (!extensionPath) {
+            return [];
+        }
+
+        const templatesDir = join(extensionPath, 'templates');
+        if (!existsSync(templatesDir)) {
+            return [];
+        }
+
+        const templateFiles = readdirSync(templatesDir)
+            .filter(file => extname(file) === '.md')
+            .map(file => basename(file, '.md'));
+
+        const templateMetadata: Record<string, {title: string, icon: string}> = {
+            'default': { title: 'Default - General Document', icon: '📄' },
+            'invoice': { title: 'Invoice - Sales Invoice', icon: '🧾' },
+            'proposal': { title: 'Proposal - Business Proposal', icon: '📋' },
+            'report': { title: 'Report - Business Report', icon: '📊' },
+            'contract': { title: 'Contract - Legal Contract', icon: '📝' },
+            'letter': { title: 'Letter - Official Letter', icon: '📮' }
+        };
+
+        return templateFiles.map(name => ({
+            name,
+            title: templateMetadata[name]?.title || `${name.charAt(0).toUpperCase() + name.slice(1)} Template`,
+            icon: templateMetadata[name]?.icon || '📄'
+        }));
+    } catch (error) {
+        console.error('Error reading templates:', error);
+        return [];
+    }
+}
+
+/**
+ * Get template content from file
+ */
+function getTemplateContent(templateName: string): string {
+    try {
+        const extensionPath = vscode.extensions.getExtension('ak-sara.aksara-writer-vscode')?.extensionPath;
+        if (!extensionPath) {
+            return getFallbackTemplate();
+        }
+
+        const templatePath = join(extensionPath, 'templates', `${templateName}.md`);
+        if (!existsSync(templatePath)) {
+            return getFallbackTemplate();
+        }
+
+        return readFileSync(templatePath, 'utf-8');
+    } catch (error) {
+        console.error(`Error reading template ${templateName}:`, error);
+        return getFallbackTemplate();
+    }
+}
+
+/**
+ * Get fallback template if file reading fails
+ */
+function getFallbackTemplate(): string {
+    return `<!--
+aksara:true
+type: document
+style: ./style.css
+size: 210mmx297mm
+meta:
+    title: Dokumen Bisnis
+    subtitle: Document Professional
+header: | PT. Perusahaan | Dokumen | \${new Date().toLocaleDateString('id-ID')} |
+footer: Halaman [page] dari [total] - Dibuat dengan Aksara Writer
+-->
 
 # Judul Dokumen
 
@@ -594,93 +903,7 @@ Aksara Writer memudahkan pembuatan dokumen profesional untuk bisnis Indonesia.
 
 ---
 *Dibuat dengan Aksara Writer*
-`,
-
-        invoice: `---
-title: "Faktur Penjualan"
-author: "PT. Nama Perusahaan"
-subject: "Faktur #INV-001"
-template: invoice
-locale: id
----
-
-# FAKTUR PENJUALAN
-
-**Nomor:** INV-001
-**Tanggal:** ${new Date().toLocaleDateString('id-ID')}
-
-## Data Perusahaan
-
-**PT. Nama Perusahaan**
-Alamat: Jl. Contoh No. 123, Jakarta
-NPWP: 01.234.567.8-901.000
-Telp: (021) 1234567
-
-## Data Pelanggan
-
-**Nama:** [Nama Pelanggan]
-**Alamat:** [Alamat Pelanggan]
-**NPWP:** [NPWP Pelanggan]
-
-## Detail Barang/Jasa
-
-| No | Deskripsi | Qty | Harga Satuan | Total |
-|----|-----------|-----|--------------|-------|
-| 1  | [Item 1]  | 1   | Rp 1.000.000| Rp 1.000.000 |
-| 2  | [Item 2]  | 2   | Rp 500.000   | Rp 1.000.000 |
-
-**Subtotal:** Rp 2.000.000
-**PPN 11%:** Rp 220.000
-**Total:** Rp 2.220.000
-
----
-*Faktur dibuat dengan Aksara Writer*
-`,
-
-        proposal: `---
-title: "Proposal Bisnis"
-author: "Nama Tim/Perusahaan"
-subject: "Proposal Kerjasama"
-template: proposal
-locale: id
----
-
-# PROPOSAL BISNIS
-
-## Ringkasan Eksekutif
-
-[Ringkasan singkat tentang proposal bisnis Anda]
-
-## Latar Belakang
-
-### Identifikasi Masalah
-- Masalah 1
-- Masalah 2
-- Masalah 3
-
-### Peluang Pasar
-[Deskripsi peluang pasar yang ada]
-
-## Solusi yang Ditawarkan
-
-### Produk/Layanan
-[Deskripsi produk atau layanan yang ditawarkan]
-
-### Keunggulan Kompetitif
-- Keunggulan 1
-- Keunggulan 2
-- Keunggulan 3
-
-## Kesimpulan
-
-[Kesimpulan dan ajakan untuk bekerjasama]
-
----
-*Proposal dibuat dengan Aksara Writer*
-`
-    };
-
-    return templates[template as keyof typeof templates] || templates.default;
+`;
 }
 
 /**

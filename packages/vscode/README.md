@@ -1,6 +1,6 @@
 # Aksara Writer - VS Code Extension
 
-![Aksara Writer Logo](https://raw.githubusercontent.com/Ak-sara/aksara-writer/tree/main/packages/vscode/aksara.png)
+![Aksara Writer Logo](https://raw.githubusercontent.com/ak-sara/aksara-writer/main/packages/vscode/aksara.png)
 
 **Modern markdown converter with Indonesian business templates for VS Code**
 
@@ -13,7 +13,7 @@ Transform your markdown documents into professional PDF, HTML, and PowerPoint pr
 - **👁️ Live Preview**: Real-time preview of your documents
 - **📝 Business Templates**: Invoice, Proposal, Report, Contract, and more
 - **🎨 Professional Themes**: Multiple themes for different document types
-- **⚡ One-Click Access**: Marp-style single button for all actions
+- **⚡ One-Click Access**: Aksara Single button for all actions
 
 ## 📦 Installation
 
@@ -90,13 +90,13 @@ background: ./background.jpg
 ## 📸 Screenshots
 
 ### Single Button Interface
-![Marp-style Button](https://ak-sara.github.io/assets/vscode-button.png)
+![Action Button](https://raw.githubusercontent.com/ak-sara/aksara-writer/main/assets/vscode-button.png)
 
 ### Command Palette
-![Action Menu](https://ak-sara.github.io/assets/vscode-menu.png)
+![Action Menu](https://raw.githubusercontent.com/ak-sara/aksara-writer/main/assets/vscode-menu.png)
 
 ### Live Preview
-![Preview Window](https://ak-sara.github.io/assets/vscode-preview.png)
+![Preview Window](https://raw.githubusercontent.com/ak-sara/aksara-writer/main/assets/vscode-preview.png)
 
 ## ⚙️ Configuration
 
