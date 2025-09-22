@@ -1,0 +1,103 @@
+/* Default Theme - Indonesian Business */
+body {
+  background: #1a1a1a;
+  color: #2c3e50;
+}
+
+.document-title {
+  color: white;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+  padding: 2rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+.document-subtitle {
+  color: #666;
+}
+
+.document-section {
+  background: #f8f9fa;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  border: 1px solid #ddd;
+}
+
+.document-header {
+  color: #666;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+.document-footer {
+  color: #6c757d;
+}
+
+/* Typography colors */
+h1 {
+  color: #2c3e50;
+  border-bottom: 3px solid #667eea;
+}
+
+h2, h3 {
+  color: #34495e;
+}
+
+h4, h5, h6 {
+  color: #5a6c7d;
+}
+
+/* Links */
+a {
+  color: #667eea;
+  border-bottom: 1px solid transparent;
+}
+
+a:hover {
+  border-bottom: 1px solid #667eea;
+}
+
+/* Code */
+code {
+  background: #ecf0f1;
+  color: #d73a49;
+}
+
+pre {
+  background: #2c3e50;
+  color: #ecf0f1;
+  border-left: 4px solid #667eea;
+}
+
+/* Tables */
+th {
+  background: #34495e;
+  color: white;
+}
+
+td {
+  border-bottom: 1px solid #e9ecef;
+}
+
+tr:nth-child(odd) {
+  background: #ffffff;  /* Odd rows - white background */
+}
+
+tr:nth-child(even) {
+  background: #f8f9fa;  /* Even rows - light gray background */
+}
+
+/* Blockquotes */
+blockquote {
+  border-left: 4px solid #667eea;
+  background: #f8f9fa;
+}
+
+blockquote::before {
+  content: '"';
+  font-size: 4rem;
+  color: #667eea;
+  position: absolute;
+  top: -0.5rem;
+  left: 0.5rem;
+  opacity: 0.3;
+}

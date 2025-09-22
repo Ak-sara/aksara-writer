@@ -31,9 +31,28 @@ if (typeof window !== 'undefined' && typeof acquireVsCodeApi !== 'undefined') {
     function enhanceAksaraPreview(): void {
         if (!hasAksaraDirectives()) return;
 
+        // Extract style directive from content
+        const extractStyleDirective = (): string | null => {
+            const content = document.body.innerHTML;
+            const styleMatch = content.match(/style:\s*([^\n\r]+)/);
+            return styleMatch ? styleMatch[1].trim() : null;
+        };
+
+        // Load custom CSS if style directive is found
+        const loadCustomStyles = (): string => {
+            const stylePath = extractStyleDirective();
+            if (stylePath && (window as any).documentDir) {
+                // For now, we'll add a placeholder comment since we can't load files directly from webview
+                // The actual CSS should already be embedded by the core converter
+                return `/* Custom styles should be loaded from: ${stylePath} */\n`;
+            }
+            return '';
+        };
+
         // Add Aksara styling to the preview
         const style = document.createElement('style');
         style.textContent = `
+            ${loadCustomStyles()}
             /* Aksara Writer Preview Styles */
             body {
                 font-family: 'Inter', 'Segoe UI', 'Noto Sans', sans-serif;

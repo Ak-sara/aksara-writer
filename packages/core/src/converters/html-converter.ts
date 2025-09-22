@@ -75,7 +75,6 @@ export class HtmlConverter {
   }
 
   private applyDocumentTheme(html: string): string {
-    const theme = this.getDocumentTheme();
     const { customUserStyles, otherCustomStyles } = this.getSeparatedCustomStyles();
     const totalSections = this.sections.length;
     const isPresentation = this.directives.type === 'presentation';
@@ -89,10 +88,12 @@ export class HtmlConverter {
     return this.replaceTemplateVars(template, {
       locale: this.options.locale || 'id',
       title: this.metadata.title || 'Aksara Document',
-      theme,
-      customStyles: otherCustomStyles, // size, background styles first
-      presentationStyles: isPresentation ? this.getPresentationStyles() : '',
-      generalStyles: this.getGeneralStyles() + '\n' + customUserStyles, // user CSS comes last
+      baseStyles: this.getBaseStyles(),
+      layoutStyles: isPresentation ? this.getPresentationStyles() : this.getDocumentStyles(),
+      controlStyles: this.getControlStyles(),
+      themeStyles: this.getThemeStyles(),
+      customStyles: otherCustomStyles, // size, background styles
+      userStyles: customUserStyles, // user CSS from style: directive (highest priority)
       documentType: isPresentation ? 'presentation' : 'document',
       controls: isPresentation ? this.getPresentationControls(totalSections) : this.getDocumentControls(totalSections),
       content: html,
@@ -100,8 +101,12 @@ export class HtmlConverter {
     });
   }
 
-  private getDocumentTheme(): string {
-    return this.loadTemplate('styles/document-theme.css');
+  private getBaseStyles(): string {
+    return this.loadTemplate('styles/base.css');
+  }
+
+  private getDocumentStyles(): string {
+    return this.loadTemplate('styles/document.css');
   }
 
   private getPresentationStyles(): string {
@@ -115,8 +120,27 @@ export class HtmlConverter {
     });
   }
 
+  private getControlStyles(): string {
+    return this.loadTemplate('styles/controls.css');
+  }
+
+  private getThemeStyles(): string {
+    const themeName = this.options.theme || 'default';
+    try {
+      return this.loadTemplate(`styles/themes/${themeName}.css`);
+    } catch (error) {
+      console.warn(`Theme '${themeName}' not found, falling back to default`);
+      return this.loadTemplate('styles/themes/default.css');
+    }
+  }
+
+  // Keep for backward compatibility
+  private getDocumentTheme(): string {
+    return this.getThemeStyles();
+  }
+
   private getGeneralStyles(): string {
-    return this.loadTemplate('styles/controls.css') + '\n' + this.loadTemplate('styles/document.css');
+    return this.getControlStyles() + '\n' + this.getDocumentStyles();
   }
 
   private getSlidePixelSize(): { width: number; height: number } {

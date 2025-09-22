@@ -1,0 +1,120 @@
+/* Minimal Theme - Clean and simple */
+body {
+  background: #1a1a1a;  /* Keep outer area dark like default */
+  color: #2c3e50;
+}
+
+.document-title {
+  color: #333;
+  background: white;
+  padding: 2rem;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  font-weight: 300;
+}
+
+.document-subtitle {
+  color: #666;
+  font-weight: 200;
+}
+
+.document-section {
+  background: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border: 1px solid #e0e0e0;
+}
+
+.document-header {
+  color: #999;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.document-footer {
+  color: #999;
+  border-top: 1px solid #f0f0f0;
+}
+
+.section-content {
+  padding: 3rem;
+}
+
+/* Typography */
+h1 {
+  color: #333;
+  border-bottom: 1px solid #eee;
+  font-weight: 300;
+}
+
+h2 {
+  color: #555;
+  font-weight: 400;
+}
+
+h3 {
+  color: #666;
+  font-weight: 400;
+}
+
+h4, h5, h6 {
+  color: #777;
+  font-weight: 400;
+}
+
+p {
+  text-align: left;
+  font-weight: 300;
+}
+
+li {
+  font-weight: 300;
+}
+
+/* Links */
+a {
+  color: #666;
+  border-bottom: 1px solid #ddd;
+}
+
+a:hover {
+  color: #333;
+  border-bottom: 1px solid #333;
+}
+
+/* Code */
+code {
+  background: #f5f5f5;
+  color: #666;
+}
+
+pre {
+  background: #f8f8f8;
+  color: #555;
+  border-left: 2px solid #ddd;
+}
+
+/* Tables */
+th {
+  background: #f8f8f8;
+  color: #333;
+  font-weight: 400;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+td {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+tr:nth-child(odd) {
+  background: #ffffff;  /* Odd rows - white background */
+}
+
+tr:nth-child(even) {
+  background: #f0f0f0;  /* Even rows - light gray background */
+}
+
+/* Blockquotes */
+blockquote {
+  border-left: 2px solid #ddd;
+  background: #fafafa;
+  color: #666;
+}

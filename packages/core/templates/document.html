@@ -5,10 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{title}}</title>
     <style>
-        {{theme}}
+        /* Base layout styles - lowest specificity */
+        {{baseStyles}}
+
+        /* Layout styles - document or presentation */
+        {{layoutStyles}}
+
+        /* Interactive controls */
+        {{controlStyles}}
+
+        /* Theme styles - visual design */
+        {{themeStyles}}
+
+        /* Custom size and background styles */
         {{customStyles}}
-        {{presentationStyles}}
-        {{generalStyles}}
+
+        /* User styles - highest specificity */
+        {{userStyles}}
     </style>
 </head>
 <body data-type="{{documentType}}">

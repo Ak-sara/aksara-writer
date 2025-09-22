@@ -185,16 +185,22 @@ interface ConvertOptions {
 /**
  * Convert markdown to HTML using CLI via stdin/stdout (live preview)
  */
-async function convertToHtmlInMemory(markdown: string): Promise<string> {
+async function convertToHtmlInMemory(markdown: string, documentPath?: string): Promise<string> {
     try {
         // Use CLI with stdin/stdout for live preview (no file I/O)
-        const command = 'aksara-writer convert - --format html --stdout --locale id';
+        // Set working directory to document directory for proper path resolution
+        const workingDir = documentPath ? path.dirname(documentPath) : process.cwd();
+        const config = vscode.workspace.getConfiguration('aksara');
+        const theme = config.get<string>('defaultTheme', 'default');
+        const locale = config.get<'id' | 'en'>('defaultLocale', 'id');
+        const command = `aksara-writer convert - --format html --stdout --locale ${locale} --theme ${theme}`;
 
         const { spawn } = await import('child_process');
 
         return new Promise((resolve, reject) => {
             const child = spawn('bash', ['-c', command], {
-                stdio: ['pipe', 'pipe', 'pipe']
+                stdio: ['pipe', 'pipe', 'pipe'],
+                cwd: workingDir // Set working directory to document directory
             });
 
             let stdout = '';
@@ -494,7 +500,7 @@ async function previewDocument(context?: vscode.ExtensionContext) {
         };
 
         // Use core-based in-memory conversion for WYSIWYG preview
-        const htmlContent = await convertToHtmlInMemory(markdown);
+        const htmlContent = await convertToHtmlInMemory(markdown, document.fileName);
         const result = { success: true, data: htmlContent };
 
         if (!result.success) {
@@ -568,7 +574,7 @@ async function previewDocument(context?: vscode.ExtensionContext) {
                     const markdown = activeEditor.document.getText();
                     if (markdown.includes('aksara:true') || markdown.includes('data-aksara')) {
                         // Use core-based in-memory conversion
-                        const htmlContent = await convertToHtmlInMemory(markdown);
+                        const htmlContent = await convertToHtmlInMemory(markdown, activeEditor.document.fileName);
 
                         // Fix image paths and inject document path information
                         let processedHtml = fixImagePathsInHtml(htmlContent, activeEditor.document.fileName, globalPreviewPanel.webview);
@@ -619,7 +625,7 @@ async function previewDocument(context?: vscode.ExtensionContext) {
                             const markdown = event.document.getText();
                             if (markdown.includes('aksara:true') || markdown.includes('data-aksara')) {
                                 // Use core-based in-memory conversion
-                                const htmlContent = await convertToHtmlInMemory(markdown);
+                                const htmlContent = await convertToHtmlInMemory(markdown, event.document.fileName);
 
                                 // Fix image paths and inject document path information
                                 let processedHtml = fixImagePathsInHtml(htmlContent, event.document.fileName, globalPreviewPanel!.webview);
@@ -765,22 +771,22 @@ async function insertTemplate() {
 
     if (!selected) return;
 
-    const editor = vscode.window.activeTextEditor;
     const templateContent = getTemplateContent(selected.value);
 
-    if (!editor) {
-        // Create new file
-        const doc = await vscode.workspace.openTextDocument({
-            language: 'markdown',
-            content: templateContent
-        });
-        await vscode.window.showTextDocument(doc);
-    } else {
-        // Insert into current document
-        const position = editor.selection.active;
-        await editor.edit(editBuilder => {
-            editBuilder.insert(position, templateContent);
-        });
+    // Always create new file for templates (better UX)
+    const doc = await vscode.workspace.openTextDocument({
+        language: 'markdown',
+        content: templateContent
+    });
+
+    const editor = await vscode.window.showTextDocument(doc);
+
+    // Auto-open preview if the template has Aksara directives
+    if (templateContent.includes('aksara:true')) {
+        // Small delay to ensure the document is fully loaded
+        setTimeout(async () => {
+            await previewDocument();
+        }, 500);
     }
 }
 
@@ -805,6 +811,40 @@ async function changeTheme() {
     await config.update('defaultTheme', selected.value, vscode.ConfigurationTarget.Global);
 
     vscode.window.showInformationMessage(`Theme changed to: ${selected.label}`);
+
+    // Refresh preview if it's open
+    if (globalPreviewPanel) {
+        const editor = vscode.window.activeTextEditor;
+        if (editor && editor.document.languageId === 'markdown') {
+            const markdown = editor.document.getText();
+            if (markdown.includes('aksara:true') || markdown.includes('data-aksara')) {
+                const htmlContent = await convertToHtmlInMemory(markdown, editor.document.fileName);
+                let processedHtml = fixImagePathsInHtml(htmlContent, editor.document.fileName, globalPreviewPanel.webview);
+
+                if (!processedHtml.includes('content-security-policy')) {
+                    processedHtml = processedHtml.replace(
+                        '<head>',
+                        `<head>
+                        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data: vscode-webview-resource: https:; script-src 'unsafe-inline'; style-src 'unsafe-inline';">`
+                    );
+                }
+
+                const docUri = globalPreviewPanel.webview.asWebviewUri(vscode.Uri.file(editor.document.fileName));
+                const docDir = globalPreviewPanel.webview.asWebviewUri(vscode.Uri.file(path.dirname(editor.document.fileName)));
+
+                const htmlWithPaths = processedHtml.replace(
+                    '<body>',
+                    `<body>
+                    <script>
+                        window.documentUri = '${docUri}';
+                        window.documentDir = '${docDir}';
+                    </script>`
+                );
+
+                globalPreviewPanel.webview.html = htmlWithPaths;
+            }
+        }
+    }
 }
 
 /**

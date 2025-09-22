@@ -17,6 +17,16 @@ export class PdfConverter {
     this.htmlConverter = new HtmlConverter(sections, directives, metadata, options, loadTemplate, replaceTemplateVars);
   }
 
+  private getThemeStyles(): string {
+    const themeName = this.options.theme || 'default';
+    try {
+      return this.loadTemplate(`styles/themes/${themeName}.css`);
+    } catch (error) {
+      console.warn(`Theme '${themeName}' not found, falling back to default`);
+      return this.loadTemplate('styles/themes/default.css');
+    }
+  }
+
   private getCustomStyles(): string {
     let styles = '';
 
@@ -117,7 +127,7 @@ export class PdfConverter {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${this.metadata.title || 'Aksara Document'}</title>
     <style>
-      ${this.loadTemplate('styles/document-theme.css')}
+      ${this.getThemeStyles()}
 
       /* Hide all interactive controls for PDF */
       .document-controls, .presentation-controls { display: none !important; }
@@ -221,7 +231,7 @@ export class PdfConverter {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${this.metadata.title || 'Aksara Document'}</title>
     <style>
-      ${this.loadTemplate('styles/document-theme.css')}
+      ${this.getThemeStyles()}
       ${this.loadTemplate('styles/controls.css')}
       ${this.loadTemplate('styles/document.css')}
 
@@ -311,7 +321,7 @@ export class PdfConverter {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${this.metadata.title || 'Aksara Document'} - Page ${pageNumber}</title>
     <style>
-      ${this.loadTemplate('styles/document-theme.css')}
+      ${this.getThemeStyles()}
 
       /* Hide all interactive controls for PDF */
       .document-controls, .presentation-controls { display: none !important; }

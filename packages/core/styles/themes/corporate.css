@@ -1,0 +1,134 @@
+/* Corporate Theme - Formal business style */
+body {
+  background: #1a1a1a;  /* Keep outer area dark like default */
+  color: #2c3e50;
+}
+
+.document-title {
+  color: white;
+  background: linear-gradient(135deg, #1a365d 0%, #3182ce 100%);
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.4);
+  padding: 2.5rem;
+  border-radius: 6px;
+  box-shadow: 0 6px 24px rgba(26, 54, 93, 0.2);
+  font-weight: 600;
+}
+
+.document-subtitle {
+  color: #4a5568;
+  font-weight: 400;
+}
+
+.document-section {
+  background: white;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.08);
+  border: 1px solid #e2e8f0;
+}
+
+.document-header {
+  color: #4a5568;
+  border-bottom: 2px solid #e2e8f0;
+  background: #f7fafc;
+}
+
+.document-footer {
+  color: #718096;
+  border-top: 2px solid #e2e8f0;
+  background: #f7fafc;
+}
+
+/* Typography */
+h1 {
+  color: #1a365d;
+  border-bottom: 3px solid #3182ce;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+h2 {
+  color: #2c5282;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+h3 {
+  color: #2c5282;
+  font-weight: 600;
+}
+
+h4, h5, h6 {
+  color: #4a5568;
+  font-weight: 600;
+}
+
+p {
+  text-align: justify;
+  color: #2d3748;
+}
+
+/* Links */
+a {
+  color: #3182ce;
+  border-bottom: 1px solid transparent;
+  font-weight: 500;
+}
+
+a:hover {
+  color: #1a365d;
+  border-bottom: 1px solid #3182ce;
+}
+
+/* Code */
+code {
+  background: #edf2f7;
+  color: #1a365d;
+  font-weight: 500;
+}
+
+pre {
+  background: #1a365d;
+  color: #e2e8f0;
+  border-left: 4px solid #3182ce;
+}
+
+/* Tables */
+th {
+  background: #1a365d;
+  color: white;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+td {
+  border-bottom: 1px solid #e2e8f0;
+  color: #2d3748;
+}
+
+tr:nth-child(odd) {
+  background: #ffffff;  /* Odd rows - white background */
+}
+
+tr:nth-child(even) {
+  background: #edf2f7;  /* Even rows - light blue background */
+}
+
+/* Blockquotes */
+blockquote {
+  border-left: 4px solid #3182ce;
+  background: #edf2f7;
+  color: #2c5282;
+  font-weight: 500;
+}
+
+blockquote::before {
+  content: '"';
+  font-size: 3rem;
+  color: #3182ce;
+  position: absolute;
+  top: -0.3rem;
+  left: 0.5rem;
+  opacity: 0.4;
+}

@@ -1,0 +1,159 @@
+/* Government Theme - Official government style */
+body {
+  background: #1a1a1a;  /* Keep outer area dark like default */
+  color: #2c3e50;
+}
+
+.document-title {
+  color: white;
+  background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+  padding: 2.5rem;
+  border-radius: 0;
+  box-shadow: 0 4px 16px rgba(73, 80, 87, 0.2);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 4px solid #dc3545;
+}
+
+.document-subtitle {
+  color: #495057;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.document-section {
+  background: white;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  border: 2px solid #dee2e6;
+  border-radius: 0;
+}
+
+.document-header {
+  color: #495057;
+  border-bottom: 2px solid #dc3545;
+  background: #f8f9fa;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.document-footer {
+  color: #6c757d;
+  border-top: 2px solid #dc3545;
+  background: #f8f9fa;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+/* Typography */
+h1 {
+  color: #212529;
+  border-bottom: 4px solid #dc3545;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+h2 {
+  color: #495057;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #6c757d;
+  padding-bottom: 0.3rem;
+}
+
+h3 {
+  color: #495057;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+h4, h5, h6 {
+  color: #6c757d;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+}
+
+p {
+  text-align: justify;
+  color: #212529;
+  line-height: 1.8;
+}
+
+/* Links */
+a {
+  color: #dc3545;
+  border-bottom: 1px solid transparent;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+a:hover {
+  color: #495057;
+  border-bottom: 1px solid #dc3545;
+}
+
+/* Code */
+code {
+  background: #e9ecef;
+  color: #495057;
+  font-weight: 600;
+  border: 1px solid #dee2e6;
+}
+
+pre {
+  background: #495057;
+  color: #f8f9fa;
+  border-left: 4px solid #dc3545;
+  border: 1px solid #dee2e6;
+}
+
+/* Tables */
+th {
+  background: #495057;
+  color: white;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 1px solid #dee2e6;
+}
+
+td {
+  border: 1px solid #dee2e6;
+  color: #212529;
+}
+
+tr:nth-child(odd) {
+  background: #ffffff;  /* Odd rows - white background */
+}
+
+tr:nth-child(even) {
+  background: #e9ecef;  /* Even rows - light gray background */
+}
+
+/* Blockquotes */
+blockquote {
+  border-left: 4px solid #dc3545;
+  background: #f8f9fa;
+  color: #495057;
+  font-weight: 500;
+  border: 1px solid #dee2e6;
+  border-left: 4px solid #dc3545;
+}
+
+blockquote::before {
+  content: '"';
+  font-size: 3rem;
+  color: #dc3545;
+  position: absolute;
+  top: -0.3rem;
+  left: 0.5rem;
+  opacity: 0.5;
+}
