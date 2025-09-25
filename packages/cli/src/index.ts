@@ -9,7 +9,8 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
 import { AksaraConverter, ConvertOptions } from 'aksara-writer-core';
-import { readFile, writeFile } from 'fs/promises';
+import { readFile, writeFile, access } from 'fs/promises';
+import { constants } from 'fs';
 import { extname, basename, resolve } from 'path';
 
 /**
@@ -97,13 +98,30 @@ program
       } else {
         // Write to file for normal operation
         const outputPath = options.output || getDefaultOutputPath(input, options.format);
+
+        // Check if file exists and show appropriate message
+        let fileExists = false;
+        try {
+          await access(outputPath, constants.F_OK);
+          fileExists = true;
+        } catch {
+          // File doesn't exist, which is fine
+        }
+
+        // Write file (this will overwrite if it exists)
         await writeFile(outputPath, result.data!);
 
-        if (spinner) spinner.succeed(chalk.green(`Document converted successfully`));
+        if (spinner) {
+          const action = fileExists ? 'replaced' : 'created';
+          spinner.succeed(chalk.green(`Document ${action} successfully`));
+        }
         console.log(chalk.blue(`Input:  ${inputPath}`));
         console.log(chalk.blue(`Output: ${resolve(outputPath)}`));
         console.log(chalk.blue(`Format: ${options.format.toUpperCase()}`));
         console.log(chalk.blue(`Locale: ${options.locale}`));
+        if (fileExists) {
+          console.log(chalk.yellow(`Note: Existing file was replaced`));
+        }
       }
 
     } catch (error) {
@@ -206,9 +224,23 @@ program
       const filename = `${options.name}.md`;
       const content = getTemplateContent(template);
 
+      // Check if file exists
+      let fileExists = false;
+      try {
+        await access(filename, constants.F_OK);
+        fileExists = true;
+      } catch {
+        // File doesn't exist, which is fine
+      }
+
+      // Write file (this will overwrite if it exists)
       await writeFile(filename, content);
 
-      spinner.succeed(chalk.green(`Document created: ${filename}`));
+      const action = fileExists ? 'replaced' : 'created';
+      spinner.succeed(chalk.green(`Document ${action}: ${filename}`));
+      if (fileExists) {
+        console.log(chalk.yellow(`Warning: Existing file was replaced`));
+      }
       console.log(chalk.blue('Next steps:'));
       console.log(chalk.white(`  1. Edit ${filename}`));
       console.log(chalk.white(`  2. Convert: aksara convert ${filename} --format pdf`));

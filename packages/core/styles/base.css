@@ -41,10 +41,44 @@ body:not([data-type]) .document-section {
 /* Header and footer layout */
 .document-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   padding: 1rem 2rem;
   font-size: 0.9rem;
+  width: 100%;
+}
+
+.document-header .header-item {
+  flex: 1;
+  display: flex;
+}
+
+/* First item: align left */
+.document-header .header-item:first-child {
+  justify-content: flex-start;
+}
+
+/* Last item: align right */
+.document-header .header-item:last-child {
+  justify-content: flex-end;
+}
+
+/* Middle items: center align */
+.document-header .header-item:not(:first-child):not(:last-child) {
+  justify-content: center;
+}
+
+/* Special case: if only one item, center it */
+.document-header .header-item:only-child {
+  justify-content: center;
+}
+
+/* Special case: if only two items, first left, second right */
+.document-header .header-item:first-child:nth-last-child(2) {
+  justify-content: flex-start;
+}
+
+.document-header .header-item:last-child:nth-child(2) {
+  justify-content: flex-end;
 }
 
 .document-footer {

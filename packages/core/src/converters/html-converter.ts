@@ -49,11 +49,13 @@ export class HtmlConverter {
     const parts = this.directives.header.split('|').map(part => part.trim()).filter(Boolean);
     const processedParts = parts.map(part => this.markdownToHtml(part));
 
+    const headerItems = processedParts.map((part, index) =>
+      `<div class="header-item">${part}</div>`
+    ).join('');
+
     return `
       <header class="document-header">
-        <div class="header-left">${processedParts[0] || ''}</div>
-        <div class="header-center">${processedParts[1] || ''}</div>
-        <div class="header-right">${processedParts[2] || ''}</div>
+        ${headerItems}
       </header>
     `;
   }

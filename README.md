@@ -92,6 +92,80 @@ This project uses:
 - **Puppeteer** for PDF generation
 - **JSZip** for PPTX generation
 
+### Local Development Setup
+
+For development with local packages linking:
+
+#### 1. Uninstall Global Packages (if any)
+```bash
+# Remove any globally installed versions
+bun remove -g aksara-writer-core
+bun remove -g aksara-writer
+```
+
+#### 2. Setup Local Development Links
+```bash
+# In project root
+cd aksara-writer
+
+# Install dependencies (this installs for all workspace packages)
+bun install
+
+# Create local links for development
+cd packages/core
+bun link                    # Make core available for linking
+
+cd ../cli
+bun link aksara-writer-core # Link to local core package
+bun run build              # Build the CLI
+bun link                   # Make CLI globally available
+
+cd ../vscode
+# VSCode extension uses CLI via shell commands, no direct core linking needed
+
+# Back to root for development
+cd ../..
+```
+
+#### 3. Development Commands
+```bash
+# Build all packages in development mode
+bun run dev
+
+# Or build individual packages
+cd packages/core && bun run dev    # Core package (watch mode)
+cd packages/cli && bun run dev     # CLI package (watch mode)
+cd packages/vscode && bun run dev  # VSCode extension (watch mode)
+
+# Test CLI locally
+bun run cli convert test.md --format pdf
+```
+
+#### 4. Revert to NPM Install (After Development)
+When you're done with development and want to use published packages:
+
+```bash
+# Unlink local packages
+cd packages/cli
+bun unlink aksara-writer-core
+bun unlink  # Remove global CLI link
+
+cd ../core
+bun unlink
+
+# Install published packages from registry
+cd ../../  # Back to root
+bun install --production
+
+# Or install globally for system-wide use
+bun install -g aksara-writer
+```
+
+### Development Workflow
+1. **Core changes**: Edit in `packages/core/src/` → Auto-rebuild with `bun run dev`
+2. **CLI changes**: Edit in `packages/cli/src/` → Test with `bun run cli`
+3. **VSCode changes**: Edit in `packages/vscode/src/` → Package with `bun run package`
+
 ## Contributing
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for development guidelines.
