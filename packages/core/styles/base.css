@@ -220,6 +220,18 @@ img {
   margin: 0;
 }
 
+/* Image positioning containers */
+.image-bg,
+.image-fg,
+.image-lg,
+.image-wm {
+  display: block;
+}
+
+.document-section {
+  position: relative; /* Ensure positioning context for absolute images */
+}
+
 /* Responsive design */
 @media (max-width: 1400px) {
   .document-section {

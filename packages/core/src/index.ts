@@ -155,27 +155,44 @@ export class AksaraConverter {
     // Process inline elements
     html = html
       .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
-        // Parse positioning attributes from alt text
-        const posMatch = alt.match(/([xywh]):\s*([^;\s]+)/g);
-        let style = 'max-width: 100%; height: auto;';
+        // Extract image type identifier and positioning
+        const typeMatch = alt.match(/^(bg|fg|lg|wm)\b/);
+        const posMatch = alt.match(/([trblxywh]):\s*([^;\s]+)/g);
 
-        if (posMatch) {
-          const styleMap: { [key: string]: string } = { 'x': 'left', 'y': 'top', 'w': 'width', 'h': 'height' };
-          let positionStyle = 'position: absolute; ';
-          posMatch.forEach((pos: string) => {
+        // Determine z-index from type
+        const zIndexMap = { 'wm': 0, 'bg': 1, 'fg': 2, 'lg': 3 };
+        const imageType = typeMatch ? typeMatch[1] : null;
+        const zIndex = imageType ? zIndexMap[imageType as keyof typeof zIndexMap] : 'auto';
+
+        let style = 'max-width: 100%; height: auto;';
+        let hasPositioning = imageType && posMatch;
+
+        if (hasPositioning) {
+          const styleMap = {
+            't': 'top', 'r': 'right', 'b': 'bottom', 'l': 'left',
+            'x': 'left', 'y': 'top', // legacy aliases
+            'w': 'width', 'h': 'height'
+          };
+          let positionStyle = `position: absolute; z-index: ${zIndex}; `;
+
+          posMatch!.forEach((pos: string) => {
             const [key, value] = pos.split(':').map((s: string) => s.trim());
-            if (styleMap[key]) {
-              positionStyle += `${styleMap[key]}: ${value}; `;
+            if (styleMap[key as keyof typeof styleMap]) {
+              positionStyle += `${styleMap[key as keyof typeof styleMap]}: ${value}; `;
             }
           });
           style = positionStyle;
-
-          // Clean alt text of positioning attributes
-          alt = alt.replace(/\s*[xywh]:[^;\s]+/g, '').trim();
         }
 
+        // Clean alt text
+        const cleanAlt = alt.replace(/^(bg|fg|lg|wm)\s*/, '').replace(/\s*[trblxywh]:[^;\s]+/g, '').trim();
         const convertedSrc = this.convertImagePath(src);
-        return `<img src="${convertedSrc}" alt="${alt}" style="${style}">`;
+
+        if (hasPositioning) {
+          return `<div class="image-${imageType}" style="${style}"><img src="${convertedSrc}" alt="${cleanAlt}" style="width: 100%; height: 100%; object-fit: contain;"></div>`;
+        }
+
+        return `<img src="${convertedSrc}" alt="${cleanAlt}" style="${style}">`;
       })
       .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -203,14 +220,14 @@ export class AksaraConverter {
         processedLines.push(line);
       } else if (line.match(/^<\/(h[1-6]|ul|ol|li|table|div|header|footer|pre)/)) {
         processedLines.push(line);
-      } else if (line.match(/^<(img|br|code)/)) {
+      } else if (line.match(/^<(img|br|code|div)/)) {
         processedLines.push(line);
       } else if (line.match(/^<\/?(ul|ol)>/)) {
         processedLines.push(line);
       } else {
         // Wrap in paragraph tags only if not empty
         if (line.trim()) {
-          processedLines.push(`<p>${line}</p>`);
+          processedLines.push(`<p style="position: relative; z-index: 2;">${line}</p>`);
         }
       }
     }

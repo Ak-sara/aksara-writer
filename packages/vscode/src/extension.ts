@@ -29,18 +29,128 @@ let previewSubscriptions: vscode.Disposable[] = [];
 // Debouncing for live preview updates
 let previewUpdateTimeout: NodeJS.Timeout | undefined;
 
+// Editor-Preview Sync System
+let syncEnabled = true;
+let isUpdatingFromPreview = false;
+
+// Sync helper functions
+function setupEditorPreviewSync(editor: vscode.TextEditor, panel: vscode.WebviewPanel) {
+    console.log('🔧 Setting up editor-preview sync for:', editor.document.fileName);
+
+    // Track cursor/scroll changes
+    const cursorSubscription = vscode.window.onDidChangeTextEditorSelection(event => {
+        if (event.textEditor === editor && !isUpdatingFromPreview && syncEnabled) {
+            const line = event.selections[0].active.line;
+            const section = getSectionFromLine(editor.document, line);
+
+            console.log('📤 Sending cursor-moved to preview:', { line, section });
+            panel.webview.postMessage({
+                type: 'cursor-moved',
+                line: line,
+                section: section
+            });
+        }
+    });
+
+    const scrollSubscription = vscode.window.onDidChangeTextEditorVisibleRanges(event => {
+        if (event.textEditor === editor && !isUpdatingFromPreview && syncEnabled) {
+            const topLine = event.visibleRanges[0]?.start.line || 0;
+            const section = getSectionFromLine(editor.document, topLine);
+
+            console.log('📤 Sending scroll-changed to preview:', { line: topLine, section });
+            panel.webview.postMessage({
+                type: 'scroll-changed',
+                line: topLine,
+                section: section
+            });
+        }
+    });
+
+    // Handle messages from preview
+    const messageSubscription = panel.webview.onDidReceiveMessage(message => {
+        console.log('📨 Received message from preview:', message);
+        if (!syncEnabled) return;
+
+        switch (message.type) {
+            case 'preview-scroll':
+                syncEditorToPreview(editor, message.line, message.section);
+                break;
+            case 'slide-changed':
+                syncEditorToSlide(editor, message.section);
+                break;
+        }
+    });
+
+    // Clean up on panel dispose
+    panel.onDidDispose(() => {
+        cursorSubscription.dispose();
+        scrollSubscription.dispose();
+        messageSubscription.dispose();
+    });
+}
+
+function getSectionFromLine(document: vscode.TextDocument, line: number): number {
+    let section = 0;
+    const sections = [];
+    for (let i = 0; i <= line; i++) {
+        const lineText = document.lineAt(i).text.trim();
+        // Count both --- separators and # headers as section boundaries
+        if (lineText === '---' || (lineText.startsWith('# ') && i > 0)) {
+            section++;
+            sections.push(`Line ${i}: "${lineText}"`);
+        }
+    }
+    console.log(`🔍 Section detection for line ${line}: section=${section}, boundaries found:`, sections);
+    return section;
+}
+
+function getLineFromSection(document: vscode.TextDocument, targetSection: number): number {
+    let section = 0;
+    for (let i = 0; i < document.lineCount; i++) {
+        const lineText = document.lineAt(i).text.trim();
+        // Count both --- separators and # headers as section boundaries
+        if (lineText === '---' || (lineText.startsWith('# ') && i > 0)) {
+            section++;
+        }
+        if (section === targetSection) {
+            return i + 1; // Return line after separator
+        }
+    }
+    return 0;
+}
+
+function syncEditorToPreview(editor: vscode.TextEditor, line: number, section: number) {
+    isUpdatingFromPreview = true;
+
+    const targetLine = line || getLineFromSection(editor.document, section);
+    const position = new vscode.Position(targetLine, 0);
+    const selection = new vscode.Selection(position, position);
+
+    editor.selection = selection;
+    editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.AtTop);
+
+    setTimeout(() => { isUpdatingFromPreview = false; }, 100);
+}
+
+function syncEditorToSlide(editor: vscode.TextEditor, section: number) {
+    const targetLine = getLineFromSection(editor.document, section);
+    syncEditorToPreview(editor, targetLine, section);
+}
+
 /**
  * Fix image paths in HTML for VS Code webview
  */
 function fixImagePathsInHtml(html: string, documentPath: string, webview: vscode.Webview): string {
     const docDir = path.dirname(documentPath);
 
-    // Replace image src attributes with webview URIs
-    return html.replace(/(<img[^>]+src=["'])([^"']+)(["'][^>]*>)/g, (match, prefix, src, suffix) => {
+    // First fix CSS background images
+    html = html.replace(/(background-image:\s*url\(['"]?)([^'")]+)(['"]?\))/g, (match, prefix, src, suffix) => {
         // Skip if already a data URL, HTTP URL, or webview resource
         if (src.startsWith('data:') || src.startsWith('http') || src.startsWith('vscode-webview-resource:')) {
             return match;
         }
+
+        console.log('🖼️ Fixing CSS background image path:', src);
 
         // Convert relative paths to absolute paths, then to webview URIs
         let absolutePath: string;
@@ -57,6 +167,39 @@ function fixImagePathsInHtml(html: string, documentPath: string, webview: vscode
         // Convert to webview URI
         try {
             const webviewUri = webview.asWebviewUri(vscode.Uri.file(absolutePath));
+            console.log('✅ Fixed CSS background path:', src, '->', webviewUri.toString());
+            return `${prefix}${webviewUri.toString()}${suffix}`;
+        } catch (error) {
+            console.warn(`Failed to convert CSS background path: ${src}`, error);
+            return match;
+        }
+    });
+
+    // Then fix image src attributes with webview URIs
+    return html.replace(/(<img[^>]+src=["'])([^"']+)(["'][^>]*>)/g, (match, prefix, src, suffix) => {
+        // Skip if already a data URL, HTTP URL, or webview resource
+        if (src.startsWith('data:') || src.startsWith('http') || src.startsWith('vscode-webview-resource:')) {
+            return match;
+        }
+
+        console.log('🖼️ Fixing img src path:', src);
+
+        // Convert relative paths to absolute paths, then to webview URIs
+        let absolutePath: string;
+        if (src.startsWith('./')) {
+            absolutePath = path.join(docDir, src.substring(2));
+        } else if (src.startsWith('../')) {
+            absolutePath = path.resolve(docDir, src);
+        } else if (!path.isAbsolute(src)) {
+            absolutePath = path.join(docDir, src);
+        } else {
+            absolutePath = src;
+        }
+
+        // Convert to webview URI
+        try {
+            const webviewUri = webview.asWebviewUri(vscode.Uri.file(absolutePath));
+            console.log('✅ Fixed img src path:', src, '->', webviewUri.toString());
             return `${prefix}${webviewUri.toString()}${suffix}`;
         } catch (error) {
             console.warn(`Failed to convert image path: ${src}`, error);
@@ -390,8 +533,8 @@ async function convertWithCli(filePath: string, options: ConvertOptions): Promis
 
         const { stdout, stderr } = await execAsync(command, { cwd: path.dirname(filePath) });
 
-        // Check if conversion was successful by looking for success message
-        if (stderr && !stderr.includes('Document converted successfully') && !stdout.includes('Document converted successfully')) {
+        // Check if conversion was successful by looking for success message or absence of real errors
+        if (stderr && stderr.includes('Error:') && !stdout.includes('Document converted successfully')) {
             return { success: false, error: stderr };
         }
 
@@ -525,6 +668,9 @@ async function previewDocument(context?: vscode.ExtensionContext) {
                 }
             );
 
+            // Setup editor-preview sync
+            setupEditorPreviewSync(editor, globalPreviewPanel);
+
             // Clear reference when panel is disposed
             globalPreviewPanel.onDidDispose(() => {
                 globalPreviewPanel = undefined;
@@ -558,7 +704,8 @@ async function previewDocument(context?: vscode.ExtensionContext) {
             <script>
                 window.documentUri = '${docUri}';
                 window.documentDir = '${docDir}';
-            </script>`
+            </script>
+            <script src="${globalPreviewPanel.webview.asWebviewUri(vscode.Uri.file(path.join(__dirname, 'preview.js')))}"></script>`
         );
 
         // Update panel content
@@ -597,7 +744,8 @@ async function previewDocument(context?: vscode.ExtensionContext) {
                             <script>
                                 window.documentUri = '${docUri}';
                                 window.documentDir = '${docDir}';
-                            </script>`
+                            </script>
+                            <script src="${globalPreviewPanel.webview.asWebviewUri(vscode.Uri.file(path.join(__dirname, 'preview.js')))}"></script>`
                         );
 
                         globalPreviewPanel.title = `Preview: ${path.basename(activeEditor.document.fileName)}`;
@@ -648,7 +796,8 @@ async function previewDocument(context?: vscode.ExtensionContext) {
                                     <script>
                                         window.documentUri = '${docUri}';
                                         window.documentDir = '${docDir}';
-                                    </script>`
+                                    </script>
+                                    <script src="${globalPreviewPanel!.webview.asWebviewUri(vscode.Uri.file(path.join(__dirname, 'preview.js')))}"></script>`
                                 );
 
                                 globalPreviewPanel!.title = `Ak'sara: ${path.basename(event.document.fileName)}`;
@@ -838,7 +987,8 @@ async function changeTheme() {
                     <script>
                         window.documentUri = '${docUri}';
                         window.documentDir = '${docDir}';
-                    </script>`
+                    </script>
+                    <script src="${globalPreviewPanel.webview.asWebviewUri(vscode.Uri.file(path.join(__dirname, 'preview.js')))}"></script>`
                 );
 
                 globalPreviewPanel.webview.html = htmlWithPaths;

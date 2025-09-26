@@ -11,9 +11,218 @@ interface VsCodeApi {
 
 declare var acquireVsCodeApi: () => VsCodeApi;
 
+// Global VSCode API reference
+let vscode: VsCodeApi | undefined;
+
 // Check if we're in VS Code preview environment
 if (typeof window !== 'undefined' && typeof acquireVsCodeApi !== 'undefined') {
-    const vscode = acquireVsCodeApi();
+    vscode = acquireVsCodeApi();
+
+    // Editor-Preview Sync System
+    let syncEnabled = true;
+    let isUpdatingFromEditor = false;
+
+    // Handle messages from extension
+    window.addEventListener('message', event => {
+        const message = event.data;
+        console.log('📨 Received message from extension:', message);
+
+        // Ensure message has expected structure
+        if (!message || !message.type) {
+            console.warn('Invalid message structure:', message);
+            return;
+        }
+
+        switch (message.type) {
+            case 'cursor-moved':
+                console.log('🎯 Processing cursor-moved:', message);
+                syncPreviewToCursor(message.line, message.section);
+                break;
+            case 'scroll-changed':
+                console.log('📜 Processing scroll-changed:', message);
+                syncPreviewToScroll(message.line, message.section);
+                break;
+            default:
+                console.log('❓ Unknown message type:', message.type);
+                break;
+        }
+    });
+
+    function syncPreviewToCursor(line: number, section: number) {
+        console.log('🔄 syncPreviewToCursor called:', { line, section, isUpdatingFromEditor });
+        if (isUpdatingFromEditor) {
+            console.log('⏭️ Skipping sync - already updating from editor');
+            return;
+        }
+        isUpdatingFromEditor = true;
+
+        // For presentations: switch to slide
+        if (document.body.classList.contains('presentation-mode')) {
+            console.log('🎯 Presentation mode - switching to slide:', section);
+            showSlide(section);
+        } else {
+            console.log('📄 Document mode - scrolling to section:', section);
+            // For documents: scroll to approximate position
+            scrollToSection(section);
+        }
+
+        setTimeout(() => { isUpdatingFromEditor = false; }, 100);
+    }
+
+    function syncPreviewToScroll(line: number, section: number) {
+        if (isUpdatingFromEditor) return;
+        syncPreviewToCursor(line, section);
+    }
+
+    function showSlide(section: number) {
+        const sections = document.querySelectorAll('.document-section');
+        sections.forEach((sec, index) => {
+            sec.classList.remove('active', 'prev', 'next');
+            if (index === section) {
+                sec.classList.add('active');
+            } else {
+                sec.classList.add(index < section ? 'prev' : 'next');
+            }
+        });
+    }
+
+    function scrollToSection(section: number) {
+        const sections = document.querySelectorAll('.aksara-section, .document-section, section');
+        console.log('📍 scrollToSection - sections found:', sections.length, 'target section:', section);
+
+        if (sections.length === 0) {
+            // Fallback: scroll to h1 headers
+            const headers = document.querySelectorAll('h1');
+            console.log('📍 Using h1 fallback - headers found:', headers.length);
+            if (headers[section]) {
+                console.log('✅ Scrolling to h1 header:', headers[section]);
+                headers[section].scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            } else {
+                console.log('❌ No h1 header at index:', section);
+            }
+            return;
+        }
+
+        if (sections[section]) {
+            console.log('✅ Scrolling to section:', sections[section]);
+            sections[section].scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        } else {
+            console.log('❌ No section at index:', section);
+        }
+    }
+
+    // Setup scroll tracking for reverse sync
+    function setupPreviewScrollTracking() {
+        let scrollTimeout: NodeJS.Timeout;
+
+        window.addEventListener('scroll', () => {
+            if (isUpdatingFromEditor) return;
+
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                const section = getCurrentSection();
+                const scrollPercent = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+
+                console.log('📤 Sending scroll message to extension:', { section, scrollPercent });
+                vscode?.postMessage({
+                    type: 'preview-scroll',
+                    section: section,
+                    scrollPercent: scrollPercent
+                });
+            }, 150);
+        });
+    }
+
+    function getCurrentSection(): number {
+        const sections = document.querySelectorAll('.aksara-section, .document-section, section');
+        if (sections.length === 0) {
+            // Fallback: detect sections by h1 headers
+            const headers = document.querySelectorAll('h1');
+            const scrollTop = window.scrollY + window.innerHeight / 2;
+
+            for (let i = headers.length - 1; i >= 0; i--) {
+                const rect = headers[i].getBoundingClientRect();
+                if (rect.top + window.scrollY <= scrollTop) {
+                    return i;
+                }
+            }
+            return 0;
+        }
+
+        const scrollTop = window.scrollY + window.innerHeight / 2;
+        for (let i = sections.length - 1; i >= 0; i--) {
+            const rect = (sections[i] as Element).getBoundingClientRect();
+            if (rect.top + window.scrollY <= scrollTop) {
+                return i;
+            }
+        }
+        return 0;
+    }
+
+    // For presentations: setup slide navigation sync
+    function setupSlideTracking() {
+        document.addEventListener('keydown', (e) => {
+            if (isUpdatingFromEditor) return;
+
+            let newSection = getCurrentSlide();
+
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                newSection++;
+            } else if (e.key === 'ArrowLeft') {
+                newSection--;
+            } else {
+                return;
+            }
+
+            const maxSections = document.querySelectorAll('.document-section').length;
+            newSection = Math.max(0, Math.min(newSection, maxSections - 1));
+
+            showSlide(newSection);
+
+            vscode?.postMessage({
+                type: 'slide-changed',
+                section: newSection
+            });
+
+            e.preventDefault();
+        });
+    }
+
+    function getCurrentSlide(): number {
+        const activeSlide = document.querySelector('.document-section.active');
+        const sections = Array.from(document.querySelectorAll('.document-section'));
+        return sections.indexOf(activeSlide as Element);
+    }
+
+    // Initialize sync system
+    function initializeSync() {
+        console.log('🔧 Initializing sync system...', {
+            hasAksara: hasAksaraDirectives(),
+            hasVscode: !!vscode,
+            isPresentationMode: isPresentationType()
+        });
+
+        if (hasAksaraDirectives() && vscode) {
+            console.log('✅ Setting up preview sync');
+            setupPreviewScrollTracking();
+
+            if (isPresentationType()) {
+                console.log('🎯 Setting up slide tracking for presentation mode');
+                setupSlideTracking();
+            }
+        } else {
+            console.log('❌ Sync not initialized:', {
+                hasAksara: hasAksaraDirectives(),
+                hasVscode: !!vscode
+            });
+        }
+    }
 
     // Function to check if document has Aksara directives
     function hasAksaraDirectives(): boolean {
@@ -320,9 +529,13 @@ if (typeof window !== 'undefined' && typeof acquireVsCodeApi !== 'undefined') {
 
     // Initialize when DOM is ready
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', enhanceAksaraPreview);
+        document.addEventListener('DOMContentLoaded', () => {
+            enhanceAksaraPreview();
+            initializeSync();
+        });
     } else {
         enhanceAksaraPreview();
+        initializeSync();
     }
 
     // Re-enhance when content updates

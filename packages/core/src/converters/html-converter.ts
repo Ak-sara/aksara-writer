@@ -268,7 +268,7 @@ export class HtmlConverter {
     // First, evaluate JavaScript expressions
     const withEvaluatedJS = this.evaluateJavaScriptExpressions(markdown);
 
-    return withEvaluatedJS
+    const html = withEvaluatedJS
       .replace(/^# (.*$)/gm, '<h1>$1</h1>')
       .replace(/^## (.*$)/gm, '<h2>$1</h2>')
       .replace(/^### (.*$)/gm, '<h3>$1</h3>')
@@ -304,18 +304,74 @@ export class HtmlConverter {
         return `<img src="${convertedSrc}" alt="image" style="${style}">`;
       })
       .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
+        // Extract image type identifier and positioning
+        const typeMatch = alt.match(/^(bg|fg|lg|wm)\b/);
+        const posMatch = alt.match(/([trblxywh]):\s*([^;\s]+)/g);
+
+        // Determine z-index from type
+        const zIndexMap = { 'wm': 0, 'bg': 1, 'fg': 2, 'lg': 3 };
+        const imageType = typeMatch ? typeMatch[1] : null;
+        const zIndex = imageType ? zIndexMap[imageType as keyof typeof zIndexMap] : 'auto';
+
+        let style = 'max-width: 100%; height: auto;';
+        let hasPositioning = imageType && posMatch;
+
+        if (hasPositioning) {
+          const styleMap = {
+            't': 'top', 'r': 'right', 'b': 'bottom', 'l': 'left',
+            'x': 'left', 'y': 'top', // legacy aliases
+            'w': 'width', 'h': 'height'
+          };
+          let positionStyle = `position: absolute; z-index: ${zIndex}; `;
+
+          posMatch!.forEach((pos: string) => {
+            const [key, value] = pos.split(':').map((s: string) => s.trim());
+            if (styleMap[key as keyof typeof styleMap]) {
+              positionStyle += `${styleMap[key as keyof typeof styleMap]}: ${value}; `;
+            }
+          });
+          style = positionStyle;
+        }
+
+        // Clean alt text
+        const cleanAlt = alt.replace(/^(bg|fg|lg|wm)\s*/, '').replace(/\s*[trblxywh]:[^;\s]+/g, '').trim();
         const convertedSrc = this.convertImagePath(src);
-        return `<img src="${convertedSrc}" alt="${alt}" style="max-width: 100%; height: auto;">`;
+
+        if (hasPositioning) {
+          return `<div class="image-${imageType}" style="${style}"><img src="${convertedSrc}" alt="${cleanAlt}" style="width: 100%; height: 100%; object-fit: contain;"></div>`;
+        }
+
+        return `<img src="${convertedSrc}" alt="${cleanAlt}" style="${style}">`;
       })
       .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
       .replace(/\|.*\|/g, (match) => {
         const cells = match.split('|').map(cell => cell.trim()).filter(Boolean);
         return '<tr>' + cells.map(cell => `<td>${cell}</td>`).join('') + '</tr>';
       })
-      .replace(/\n\n/g, '</p><p>')
-      .replace(/^(?!<[uh])/gm, '<p>')
-      .replace(/(?<!>)$/gm, '</p>')
       .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+
+    // Apply paragraph wrapping similar to main converter
+    const lines = html.split('\n');
+    const processedLines: string[] = [];
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed === '') continue;
+
+      // Don't wrap block elements or positioned image divs
+      if (trimmed.match(/^<(h[1-6]|ul|ol|li|table|div|header|footer|pre|img|br|code)/)) {
+        processedLines.push(trimmed);
+      } else if (trimmed.match(/^<\/(h[1-6]|ul|ol|li|table|div|header|footer|pre)/)) {
+        processedLines.push(trimmed);
+      } else {
+        // Wrap in paragraph tags only if not empty
+        if (trimmed) {
+          processedLines.push(`<p style="position: relative; z-index: 2;">${trimmed}</p>`);
+        }
+      }
+    }
+
+    return processedLines.join('\n');
   }
 
   private evaluateJavaScriptExpressions(text: string): string {
