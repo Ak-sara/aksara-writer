@@ -23,13 +23,49 @@ export class HtmlConverter {
     };
   }
 
+  private extractBackgroundImages(html: string): { backgroundImages: string; contentWithoutBg: string } {
+    const backgroundImageRegex = /<div class="image-(bg|wm)"[^>]*>.*?<\/div>/g;
+    const pageBackgroundRegex = /<div class="page-background"[^>]*><\/div>/g;
+
+    const backgroundImages: string[] = [];
+    let contentWithoutBg = html;
+
+    // Extract image-bg, image-wm divs (positioned background images)
+    let match;
+    while ((match = backgroundImageRegex.exec(html)) !== null) {
+      backgroundImages.push(match[0]);
+      contentWithoutBg = contentWithoutBg.replace(match[0], '');
+    }
+
+    // Extract page-background divs (legacy background images)
+    while ((match = pageBackgroundRegex.exec(html)) !== null) {
+      backgroundImages.push(match[0]);
+      contentWithoutBg = contentWithoutBg.replace(match[0], '');
+    }
+
+    return {
+      backgroundImages: backgroundImages.join('\n'),
+      contentWithoutBg: contentWithoutBg.trim()
+    };
+  }
+
   private generateSectionedHtml(): string {
     const sectionsHtml = this.sections.map(section => {
+      // Extract background images from section content
+      const { backgroundImages, contentWithoutBg } = this.extractBackgroundImages(section.html);
+
+      // Build section classes
+      let sectionClasses = 'document-section';
+      if (section.classes) {
+        sectionClasses += ` ${section.classes}`;
+      }
+
       return `
-        <section class="document-section" data-section="${section.index}">
+        <section class="${sectionClasses}" data-section="${section.index}">
+          ${backgroundImages}
           ${this.directives.header ? this.generateHeader(section.index) : ''}
           <div class="section-content">
-            ${section.html}
+            ${contentWithoutBg}
           </div>
           ${this.generateFooter(section.index)}
         </section>
@@ -46,8 +82,8 @@ export class HtmlConverter {
   private generateHeader(pageNumber: number): string {
     if (!this.directives.header) return '';
 
-    const parts = this.directives.header.split('|').map(part => part.trim()).filter(Boolean);
-    const processedParts = parts.map(part => this.markdownToHtml(part));
+    const parts = this.directives.header.split('|').filter(part => part !== '');
+    const processedParts = parts.map(part => this.markdownToHtml(part.trim()));
 
     const headerItems = processedParts.map((part, index) =>
       `<div class="header-item">${part}</div>`
@@ -174,7 +210,7 @@ export class HtmlConverter {
       otherCustomStyles += `
         .document-section {
           background-image: url(${backgroundPath}) !important;
-          background-size: cover !important;
+          background-size: 100% 100% !important;
           background-position: center !important;
           background-repeat: no-repeat !important;
         }
@@ -278,33 +314,47 @@ export class HtmlConverter {
       .replace(/`(.*?)`/g, '<code>$1</code>')
       .replace(/^\- (.*$)/gm, '<li>$1</li>')
       .replace(/^(\d+)\. (.*$)/gm, '<li>$2</li>')
-      .replace(/!\[image([^\]]*)\]\(([^)]+)\)/g, (match, attrs, src) => {
-        let style = 'max-width: 100%; height: auto;';
+      .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
+        // Handle ![image ...] syntax (legacy and new)
+        if (alt.toLowerCase().startsWith('image')) {
+          const attrs = alt.replace(/^image\s*/i, '');
+          let style = 'max-width: 100%; height: auto;';
 
-        if (attrs.trim()) {
-          if (attrs.includes('bg') || attrs.includes('background')) {
-            return `<div class="page-background" style="background-image: url(${src}); background-size: cover; background-position: center; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;"></div>`;
-          }
+          if (attrs.trim()) {
+            if (attrs.includes('bg') || attrs.includes('background')) {
+              return `<div class="page-background" style="background-image: url(${src}); background-size: 100% 100%; background-position: center; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;"></div>`;
+            }
 
-          const positions = attrs.match(/([xywh]):\s*([^;\s]+)/g);
-          if (positions) {
-            const styleMap: { [key: string]: string } = { 'x': 'left', 'y': 'top', 'w': 'width', 'h': 'height' };
-            let positionStyle = 'position: absolute; ';
-            positions.forEach((pos: string) => {
-              const [key, value] = pos.split(':').map((s: string) => s.trim());
-              if (styleMap[key]) {
-                positionStyle += `${styleMap[key]}: ${value}; `;
+            const positions = attrs.match(/([xywh]):\s*([^;\s]+)/g);
+            if (positions) {
+              const styleMap: { [key: string]: string } = { 'x': 'left', 'y': 'top', 'w': 'width', 'h': 'height' };
+              let hasPositionAttrs = positions.some((pos: string) => pos.match(/^[xy]:/));
+              let hasSizeAttrs = positions.some((pos: string) => pos.match(/^[wh]:/));
+
+              if (hasPositionAttrs) {
+                style = 'position: absolute; ';
+              } else {
+                style = '';
               }
-            });
-            style = positionStyle;
+
+              positions.forEach((pos: string) => {
+                const [key, value] = pos.split(':').map((s: string) => s.trim());
+                if (styleMap[key]) {
+                  style += `${styleMap[key]}: ${value}; `;
+                }
+              });
+
+              if (!hasPositionAttrs && hasSizeAttrs) {
+                style += 'object-fit: contain;';
+              }
+            }
           }
+
+          const convertedSrc = this.convertImagePath(src);
+          return `<img src="${convertedSrc}" alt="image" style="${style}">`;
         }
 
-        const convertedSrc = this.convertImagePath(src);
-        return `<img src="${convertedSrc}" alt="image" style="${style}">`;
-      })
-      .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
-        // Extract image type identifier and positioning
+        // Handle general image syntax with type identifiers and positioning
         const typeMatch = alt.match(/^(bg|fg|lg|wm)\b/);
         const posMatch = alt.match(/([trblxywh]):\s*([^;\s]+)/g);
 
@@ -314,7 +364,8 @@ export class HtmlConverter {
         const zIndex = imageType ? zIndexMap[imageType as keyof typeof zIndexMap] : 'auto';
 
         let style = 'max-width: 100%; height: auto;';
-        let hasPositioning = imageType && posMatch;
+        let hasPositioning = imageType && posMatch && posMatch.some((pos: string) => pos.match(/^[trblxy]:/));
+        let hasSizing = posMatch && posMatch.some((pos: string) => pos.match(/^[wh]:/));
 
         if (hasPositioning) {
           const styleMap = {
@@ -331,6 +382,20 @@ export class HtmlConverter {
             }
           });
           style = positionStyle;
+        } else if (hasSizing) {
+          // Handle standalone sizing (w: and h:) without positioning
+          let sizeStyle = '';
+          posMatch!.forEach((pos: string) => {
+            const [key, value] = pos.split(':').map((s: string) => s.trim());
+            if (key === 'w') {
+              sizeStyle += `width: ${value}; `;
+            } else if (key === 'h') {
+              sizeStyle += `height: ${value}; `;
+            }
+          });
+          if (sizeStyle) {
+            style = sizeStyle + 'object-fit: contain;';
+          }
         }
 
         // Clean alt text
@@ -338,7 +403,7 @@ export class HtmlConverter {
         const convertedSrc = this.convertImagePath(src);
 
         if (hasPositioning) {
-          return `<div class="image-${imageType}" style="${style}"><img src="${convertedSrc}" alt="${cleanAlt}" style="width: 100%; height: 100%; object-fit: contain;"></div>`;
+          return `<div class="image-${imageType}" style="${style}"><img src="${convertedSrc}" alt="${cleanAlt}" style="width: 100%; height: 100%; object-fit: fill;"></div>`;
         }
 
         return `<img src="${convertedSrc}" alt="${cleanAlt}" style="${style}">`;

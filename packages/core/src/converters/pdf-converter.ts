@@ -33,18 +33,24 @@ export class PdfConverter {
     // Load custom CSS file for PDF
     if (this.directives.style) {
       try {
-        // Load custom CSS file - resolve relative to the document directory
+        // Load custom CSS file - resolve relative to the document directory or process.cwd()
         let stylePath: string;
         if (isAbsolute(this.directives.style)) {
           stylePath = this.directives.style;
         } else {
-          // For relative paths, resolve from current working directory
+          // First try resolving from current working directory
           stylePath = resolve(process.cwd(), this.directives.style);
+
+          // If not found, try resolving from the directory containing the source file
+          if (!existsSync(stylePath) && this.options.sourceDir) {
+            stylePath = resolve(this.options.sourceDir, this.directives.style);
+          }
         }
 
         if (existsSync(stylePath)) {
           const customCss = readFileSync(stylePath, 'utf-8');
           styles += `\n/* Custom user styles from: ${this.directives.style} (applied last for PDF) */\n${customCss}\n`;
+          console.log(`Loaded custom CSS from: ${stylePath}`);
         } else {
           console.warn(`Custom style file not found: ${this.directives.style} (resolved to: ${stylePath})`);
           styles += `/* Custom style file not found: ${this.directives.style} */\n`;
@@ -58,6 +64,47 @@ export class PdfConverter {
     return styles;
   }
 
+  private expandCustomStyles(): string {
+    const customStyles = this.getCustomStyles();
+
+    // Expand nested CSS for PDF compatibility
+    let expandedStyles = customStyles
+      .replace(/\.document-section/g, '.pdf-page')
+      .replace(/\.section-content/g, '.pdf-content');
+
+    // Handle nested CSS by expanding it
+    // Convert .pdf-page { h1 {border:none} } to .pdf-page h1 {border:none}
+    expandedStyles = expandedStyles.replace(
+      /\.pdf-page\s*\{\s*([^}]*?\s*)(h[1-6]|p|ul|li|strong|br)\s*\{([^}]*)\}/g,
+      (match, prefix, element, styles) => {
+        return `.pdf-page ${element} {${styles}} ${prefix.trim() ? `.pdf-page {${prefix}}` : ''}`;
+      }
+    );
+
+    // Handle :first-child and :last-child pseudo-selectors
+    expandedStyles = expandedStyles.replace(
+      /\.pdf-page:(first|last)-child/g,
+      '.pdf-page:$1-child'
+    );
+
+    // Ensure content has proper z-index above background images and proper flex alignment
+    expandedStyles += `
+    .pdf-page .pdf-content {
+      position: relative !important;
+      z-index: 2 !important;
+    }
+    .pdf-page {
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: flex-start !important;
+    }
+    .pdf-page .document-footer .page-number {
+      position: relative !important;
+      align-self: flex-start !important;
+    }`;
+
+    return expandedStyles;
+  }
 
   async convert(): Promise<ConvertResult> {
     try {
@@ -202,6 +249,32 @@ export class PdfConverter {
 </html>`;
   }
 
+  private extractBackgroundImages(html: string): { backgroundImages: string; contentWithoutBg: string } {
+    const backgroundImageRegex = /<div class="image-(bg|wm)"[^>]*>.*?<\/div>/g;
+    const pageBackgroundRegex = /<div class="page-background"[^>]*><\/div>/g;
+
+    const backgroundImages: string[] = [];
+    let contentWithoutBg = html;
+
+    // Extract image-bg, image-wm divs (positioned background images)
+    let match;
+    while ((match = backgroundImageRegex.exec(html)) !== null) {
+      backgroundImages.push(match[0]);
+      contentWithoutBg = contentWithoutBg.replace(match[0], '');
+    }
+
+    // Extract page-background divs (legacy background images)
+    while ((match = pageBackgroundRegex.exec(html)) !== null) {
+      backgroundImages.push(match[0]);
+      contentWithoutBg = contentWithoutBg.replace(match[0], '');
+    }
+
+    return {
+      backgroundImages: backgroundImages.join('\n'),
+      contentWithoutBg: contentWithoutBg.trim()
+    };
+  }
+
   private generateStackedHtmlForPdf(): string {
     const isPresentation = this.directives.type === 'presentation';
     const { pageWidth, pageHeight } = this.getPageDimensions();
@@ -212,11 +285,15 @@ export class PdfConverter {
       const headerHtml = this.directives.header ? this.generateHeader(pageNumber) : '';
       const footerHtml = this.generateFooter(pageNumber);
 
+      // Extract background images from section content
+      const { backgroundImages, contentWithoutBg } = this.extractBackgroundImages(section.html);
+
       return `
-        <div class="pdf-page">
+        <div class="pdf-page${section.classes ? ` ${section.classes}` : ''}">
+          ${backgroundImages}
           ${headerHtml}
           <div class="pdf-content">
-            ${section.html}
+            ${contentWithoutBg}
           </div>
           ${footerHtml}
         </div>
@@ -231,12 +308,13 @@ export class PdfConverter {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${this.metadata.title || 'Aksara Document'}</title>
     <style>
+      ${this.loadTemplate('styles/base.css')}
       ${this.getThemeStyles()}
       ${this.loadTemplate('styles/controls.css')}
       ${this.loadTemplate('styles/document.css')}
 
-      /* Custom styles for PDF */
-      ${this.getCustomStyles()}
+      /* Custom styles for PDF - map .document-section to .pdf-page and expand nested CSS */
+      ${this.expandCustomStyles()}
 
       /* Hide all interactive controls for PDF */
       .document-controls, .presentation-controls,
@@ -272,7 +350,7 @@ export class PdfConverter {
         position: relative !important;
         overflow: hidden !important;
         box-sizing: border-box !important;
-        ${this.directives.background ? `background-image: url(${this.convertImagePath(this.directives.background)}) !important; background-size: cover !important; background-position: center !important; background-repeat: no-repeat !important;` : ''}
+        ${this.directives.background ? `background-image: url("${this.convertImagePath(this.directives.background)}") !important; background-size: 100% 100% !important; background-position: center !important; background-repeat: no-repeat !important;` : ''}
       }
 
       .pdf-page:last-child {
@@ -281,7 +359,7 @@ export class PdfConverter {
 
       .pdf-content {
         flex: 1 !important;
-        ${isPresentation ? 'display: flex !important; flex-direction: column !important; justify-content: center !important; padding: 2rem !important;' : 'padding: 2rem !important;'}
+        ${isPresentation ? 'display: flex !important; flex-direction: column !important; justify-content: flex-start !important; padding: 2rem !important;' : 'padding: 2rem !important;'}
         overflow: hidden !important;
       }
 
@@ -289,13 +367,57 @@ export class PdfConverter {
         flex-shrink: 0 !important;
       }
 
+      /* Preserve header layout from base.css */
+      .pdf-page .document-header {
+        background: transparent !important;
+        /* Keep original flex layout for proper header-item alignment */
+      }
+
+      .pdf-page .document-footer {
+        background: transparent !important;
+        /* Keep original flex layout */
+      }
+
+      /* Fix background images to cover full page */
+      .pdf-page .page-background,
+      .pdf-page .image-wm {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        z-index: -1 !important;
+        background-size: 100% 100% !important;
+        background-position: center !important;
+        background-repeat: no-repeat !important;
+      }
+
+      /* Section background images (bg directive images) should be above page background but below content */
+      .pdf-page .image-bg {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        z-index: 1 !important;
+        background-size: 100% 100% !important;
+        background-position: center !important;
+        background-repeat: no-repeat !important;
+      }
+
       /* Override any absolute positioning from original styles */
       .pdf-page * {
         position: static !important;
       }
 
-      /* Allow specific positioned elements (like images with x:, y: attributes) */
-      .pdf-page img[style*="position: absolute"] {
+      /* Allow specific positioned elements */
+      .pdf-page img[style*="position: absolute"],
+      .pdf-page .page-background,
+      .pdf-page .image-bg,
+      .pdf-page .image-wm,
+      .pdf-page .image-fg,
+      .pdf-page .image-lg,
+      .pdf-page div[style*="position: absolute"] {
         position: absolute !important;
       }
     </style>
@@ -313,6 +435,9 @@ export class PdfConverter {
     const headerHtml = this.directives.header ? this.generateHeader(pageNumber) : '';
     const footerHtml = this.generateFooter(pageNumber);
 
+    // Extract background images from section content
+    const { backgroundImages, contentWithoutBg } = this.extractBackgroundImages(section.html);
+
     return `
 <!DOCTYPE html>
 <html lang="${this.options.locale}">
@@ -321,7 +446,13 @@ export class PdfConverter {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${this.metadata.title || 'Aksara Document'} - Page ${pageNumber}</title>
     <style>
+      ${this.loadTemplate('styles/base.css')}
       ${this.getThemeStyles()}
+      ${this.loadTemplate('styles/controls.css')}
+      ${this.loadTemplate('styles/document.css')}
+
+      /* Custom styles for PDF - map .document-section to .pdf-page and expand nested CSS */
+      ${this.expandCustomStyles()}
 
       /* Hide all interactive controls for PDF */
       .document-controls, .presentation-controls { display: none !important; }
@@ -362,7 +493,7 @@ export class PdfConverter {
         display: flex !important;
         flex-direction: column !important;
         box-sizing: border-box !important;
-        ${this.directives.background ? `background-image: url(${this.convertImagePath(this.directives.background)}) !important; background-size: cover !important; background-position: center !important; background-repeat: no-repeat !important;` : ''}
+        ${this.directives.background ? `background-image: url(${this.convertImagePath(this.directives.background)}) !important; background-size: 100% 100% !important; background-position: center !important; background-repeat: no-repeat !important;` : ''}
       }
 
       .section-content {
@@ -374,14 +505,48 @@ export class PdfConverter {
       .document-header, .document-footer {
         flex-shrink: 0 !important;
       }
+
+      /* Preserve header layout from base.css but make it less intrusive */
+      .document-header {
+        background: transparent !important;
+        /* Keep original flex layout for proper header-item alignment */
+      }
+
+      .document-footer {
+        background: transparent !important;
+        /* Keep original flex layout */
+      }
+
+      /* Fix background images to cover full page */
+      .page-background,
+      .image-bg,
+      .image-wm {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        z-index: -1 !important;
+        background-size: cover !important;
+        background-position: center !important;
+        background-repeat: no-repeat !important;
+      }
+
+      /* Ensure other positioned images work correctly */
+      .image-fg,
+      .image-lg {
+        position: absolute !important;
+        z-index: 5 !important;
+      }
     </style>
 </head>
 <body data-type="${isPresentation ? 'presentation' : 'document'}">
     <div class="aksara-document">
-        <section class="document-section">
+        <section class="document-section${section.classes ? ` ${section.classes}` : ''}">
+          ${backgroundImages}
           ${headerHtml}
           <div class="section-content">
-            ${section.html}
+            ${contentWithoutBg}
           </div>
           ${footerHtml}
         </section>
@@ -393,8 +558,8 @@ export class PdfConverter {
   private generateHeader(pageNumber: number): string {
     if (!this.directives.header) return '';
 
-    const parts = this.directives.header.split('|').map(part => part.trim()).filter(Boolean);
-    const processedParts = parts.map(part => this.markdownToHtml(part));
+    const parts = this.directives.header.split('|').filter(part => part !== '');
+    const processedParts = parts.map(part => this.markdownToHtml(part.trim()));
 
     const headerItems = processedParts.map((part, index) =>
       `<div class="header-item">${part}</div>`
@@ -427,7 +592,12 @@ export class PdfConverter {
     // First, evaluate JavaScript expressions
     const withEvaluatedJS = this.evaluateJavaScriptExpressions(markdown);
 
-    return withEvaluatedJS
+    // Preserve existing HTML span tags with style attributes before markdown processing
+    const htmlPreserved = withEvaluatedJS.replace(/<span[^>]*style="[^"]*"[^>]*>.*?<\/span>/g, (match) => {
+      return `__HTML_PRESERVE_${Buffer.from(match).toString('base64')}_HTML_PRESERVE__`;
+    });
+
+    const processed = htmlPreserved
       .replace(/^# (.*$)/gm, '<h1>$1</h1>')
       .replace(/^## (.*$)/gm, '<h2>$1</h2>')
       .replace(/^### (.*$)/gm, '<h3>$1</h3>')
@@ -435,32 +605,110 @@ export class PdfConverter {
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
       .replace(/`(.*?)`/g, '<code>$1</code>')
-      .replace(/!\[image([^\]]*)\]\(([^)]+)\)/g, (match, attrs, src) => {
-        const convertedSrc = this.convertImagePath(src);
-        let style = 'max-width: 100%; height: auto;';
+      .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
+        // Handle ![image ...] syntax (legacy and new)
+        if (alt.toLowerCase().startsWith('image')) {
+          const attrs = alt.replace(/^image\s*/i, '');
+          let style = 'max-width: 100%; height: auto;';
 
-        if (attrs.trim()) {
-          const positions = attrs.match(/([xywh]):\s*([^;\s]+)/g);
-          if (positions) {
-            const styleMap: { [key: string]: string } = { 'x': 'left', 'y': 'top', 'w': 'width', 'h': 'height' };
-            let positionStyle = 'position: absolute; ';
-            positions.forEach((pos: string) => {
-              const [key, value] = pos.split(':').map((s: string) => s.trim());
-              if (styleMap[key]) {
-                positionStyle += `${styleMap[key]}: ${value}; `;
+          if (attrs.trim()) {
+            if (attrs.includes('bg') || attrs.includes('background')) {
+              return `<div class="page-background" style="background-image: url(${src}); background-size: 100% 100%; background-position: center; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;"></div>`;
+            }
+
+            const positions = attrs.match(/([xywh]):\s*([^;\s]+)/g);
+            if (positions) {
+              const styleMap: { [key: string]: string } = { 'x': 'left', 'y': 'top', 'w': 'width', 'h': 'height' };
+              let hasPositionAttrs = positions.some((pos: string) => pos.match(/^[xy]:/));
+              let hasSizeAttrs = positions.some((pos: string) => pos.match(/^[wh]:/));
+
+              if (hasPositionAttrs) {
+                style = 'position: absolute; ';
+              } else {
+                style = '';
               }
-            });
-            style = positionStyle;
+
+              positions.forEach((pos: string) => {
+                const [key, value] = pos.split(':').map((s: string) => s.trim());
+                if (styleMap[key]) {
+                  style += `${styleMap[key]}: ${value}; `;
+                }
+              });
+
+              if (!hasPositionAttrs && hasSizeAttrs) {
+                style += 'object-fit: contain;';
+              }
+            }
+          }
+
+          const convertedSrc = this.convertImagePath(src);
+          return `<img src="${convertedSrc}" alt="image" style="${style}">`;
+        }
+
+        // Handle general image syntax with type identifiers and positioning
+        const typeMatch = alt.match(/^(bg|fg|lg|wm)\b/);
+        const posMatch = alt.match(/([trblxywh]):[^;\s]+/g);
+
+        // Determine z-index from type
+        const zIndexMap = { 'wm': 0, 'bg': 1, 'fg': 2, 'lg': 3 };
+        const imageType = typeMatch ? typeMatch[1] : null;
+        const zIndex = imageType ? zIndexMap[imageType as keyof typeof zIndexMap] : 'auto';
+
+        let style = 'max-width: 100%; height: auto;';
+        let hasPositioning = imageType && posMatch && posMatch.some((pos: string) => pos.match(/^[trblxy]:/));
+        let hasSizing = posMatch && posMatch.some((pos: string) => pos.match(/^[wh]:/));
+
+        if (hasPositioning) {
+          const styleMap = {
+            't': 'top', 'r': 'right', 'b': 'bottom', 'l': 'left',
+            'x': 'left', 'y': 'top', // legacy aliases
+            'w': 'width', 'h': 'height'
+          };
+          let positionStyle = `position: absolute; z-index: ${zIndex}; `;
+
+          posMatch!.forEach((pos: string) => {
+            const [key, value] = pos.split(':').map((s: string) => s.trim());
+            if (styleMap[key as keyof typeof styleMap]) {
+              positionStyle += `${styleMap[key as keyof typeof styleMap]}: ${value}; `;
+            }
+          });
+          style = positionStyle;
+        } else if (hasSizing) {
+          // Handle standalone sizing (w: and h:) without positioning
+          let sizeStyle = '';
+          posMatch!.forEach((pos: string) => {
+            const [key, value] = pos.split(':').map((s: string) => s.trim());
+            if (key === 'w') {
+              sizeStyle += `width: ${value}; `;
+            } else if (key === 'h') {
+              sizeStyle += `height: ${value}; `;
+            }
+          });
+          if (sizeStyle) {
+            style = sizeStyle + 'object-fit: contain;';
           }
         }
 
-        return `<img src="${convertedSrc}" alt="image" style="${style}">`;
-      })
-      .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
+        // Clean alt text
+        const cleanAlt = alt.replace(/^(bg|fg|lg|wm)\s*/, '').replace(/\s*[trblxywh]:[^;\s]+/g, '').trim();
         const convertedSrc = this.convertImagePath(src);
-        return `<img src="${convertedSrc}" alt="${alt}" style="max-width: 100%; height: auto;">`;
+
+        if (hasPositioning) {
+          // For bg images, create a background div instead of img element to ensure proper rendering
+          if (imageType === 'bg') {
+            return `<div class="image-${imageType}" style="${style} background-image: url('${convertedSrc}'); background-size: 100% 100%; background-position: center; background-repeat: no-repeat;"></div>`;
+          }
+          return `<div class="image-${imageType}" style="${style}"><img src="${convertedSrc}" alt="${cleanAlt}" style="width: 100%; height: 100%; object-fit: fill;"></div>`;
+        }
+
+        return `<img src="${convertedSrc}" alt="${cleanAlt}" style="${style}">`;
       })
       .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+
+    // Restore preserved HTML span tags
+    return processed.replace(/__HTML_PRESERVE_([A-Za-z0-9+/=]+)_HTML_PRESERVE__/g, (match, base64) => {
+      return Buffer.from(base64, 'base64').toString('utf8');
+    });
   }
 
   private evaluateJavaScriptExpressions(text: string): string {

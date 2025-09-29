@@ -116,16 +116,32 @@ export class AksaraConverter {
   }
 
   /**
-   * Parse content into sections (split by ---)
+   * Parse content into sections (split by ---) and extract class comments
    */
   private parseSections(content: string): DocumentSection[] {
     const sections = content.split(/^---$/m).map(section => section.trim()).filter(Boolean);
 
-    return sections.map((sectionContent, index) => ({
-      content: sectionContent,
-      index: index + 1,
-      html: this.markdownToHtml(sectionContent)
-    }));
+    return sections.map((sectionContent, index) => {
+      // Extract class comment from section content
+      const classCommentRegex = /<!--\s*class:\s*([^-]*?)\s*-->/;
+      const classMatch = sectionContent.match(classCommentRegex);
+
+      let classes = '';
+      let cleanContent = sectionContent;
+
+      if (classMatch) {
+        classes = classMatch[1].trim();
+        // Remove the class comment from content
+        cleanContent = sectionContent.replace(classCommentRegex, '').trim();
+      }
+
+      return {
+        content: cleanContent,
+        index: index + 1,
+        html: this.markdownToHtml(cleanContent),
+        classes: classes || undefined
+      };
+    });
   }
 
   /**
@@ -165,7 +181,8 @@ export class AksaraConverter {
         const zIndex = imageType ? zIndexMap[imageType as keyof typeof zIndexMap] : 'auto';
 
         let style = 'max-width: 100%; height: auto;';
-        let hasPositioning = imageType && posMatch;
+        let hasPositioning = imageType && posMatch && posMatch.some((pos: string) => pos.match(/^[trblxy]:/));
+        let hasSizing = posMatch && posMatch.some((pos: string) => pos.match(/^[wh]:/));
 
         if (hasPositioning) {
           const styleMap = {
@@ -182,6 +199,20 @@ export class AksaraConverter {
             }
           });
           style = positionStyle;
+        } else if (hasSizing) {
+          // Handle standalone sizing (w: and h:) without positioning
+          let sizeStyle = '';
+          posMatch!.forEach((pos: string) => {
+            const [key, value] = pos.split(':').map((s: string) => s.trim());
+            if (key === 'w') {
+              sizeStyle += `width: ${value}; `;
+            } else if (key === 'h') {
+              sizeStyle += `height: ${value}; `;
+            }
+          });
+          if (sizeStyle) {
+            style = sizeStyle + 'object-fit: contain;';
+          }
         }
 
         // Clean alt text
@@ -189,7 +220,7 @@ export class AksaraConverter {
         const convertedSrc = this.convertImagePath(src);
 
         if (hasPositioning) {
-          return `<div class="image-${imageType}" style="${style}"><img src="${convertedSrc}" alt="${cleanAlt}" style="width: 100%; height: 100%; object-fit: contain;"></div>`;
+          return `<div class="image-${imageType}" style="${style}"><img src="${convertedSrc}" alt="${cleanAlt}" style="width: 100%; height: 100%; object-fit: fill;"></div>`;
         }
 
         return `<img src="${convertedSrc}" alt="${cleanAlt}" style="${style}">`;

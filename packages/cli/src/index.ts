@@ -11,7 +11,7 @@ import ora from 'ora';
 import { AksaraConverter, ConvertOptions } from 'aksara-writer-core';
 import { readFile, writeFile, access } from 'fs/promises';
 import { constants } from 'fs';
-import { extname, basename, resolve } from 'path';
+import { extname, basename, resolve, dirname } from 'path';
 
 /**
  * Read input from stdin
@@ -77,7 +77,8 @@ program
         template: options.template,
         locale: options.locale as 'id' | 'en',
         pageSize: options.pageSize as 'A4' | 'Letter' | 'Legal',
-        orientation: options.orientation as 'portrait' | 'landscape'
+        orientation: options.orientation as 'portrait' | 'landscape',
+        sourceDir: isStdin ? process.cwd() : dirname(resolve(input))
       };
 
       // Create converter

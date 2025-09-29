@@ -5,6 +5,7 @@ export interface ConvertOptions {
   locale?: 'id' | 'en';
   pageSize?: 'A4' | 'Letter' | 'Legal';
   orientation?: 'portrait' | 'landscape';
+  sourceDir?: string;
 }
 
 export interface DocumentMetadata {
@@ -35,6 +36,7 @@ export interface DocumentSection {
   content: string;
   index: number;
   html: string;
+  classes?: string;
 }
 
 export interface ConvertResult {
