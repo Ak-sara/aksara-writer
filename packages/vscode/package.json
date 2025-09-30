@@ -109,7 +109,7 @@
     ]
   },
   "scripts": {
-    "build": "tsc && webpack --mode production",
+    "build": "tsc && webpack --mode production && cp lib/sync.js dist/sync.js",
     "dev": "tsc --watch",
     "package": "vsce package --no-dependencies",
     "publish": "vsce publish --no-dependencies",

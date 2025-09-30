@@ -13,7 +13,6 @@ let activeListeners = [];
 
 // Clean up any existing sync listeners
 function cleanupSync() {
-    console.log('🧹 Cleaning up previous sync listeners');
     activeListeners.forEach(cleanup => {
         if (typeof cleanup === 'function') {
             cleanup();
@@ -30,14 +29,10 @@ function cleanupSync() {
     // Reset sync state
     isUpdatingFromEditor = false;
     syncEnabled = true;
-
-    console.log('✅ Sync cleanup completed');
 }
 
 // Hook into existing Aksara navigation functions
 function initializeVSCodeSync() {
-    console.log('🔧 Initializing VS Code sync...');
-
     // First, clean up any existing listeners
     cleanupSync();
 
@@ -46,16 +41,7 @@ function initializeVSCodeSync() {
                     document.querySelector('.document-section') ||
                     document.querySelector('.aksara-section');
 
-    console.log('🔍 Document analysis:', {
-        hasAksaraInHTML: document.body.innerHTML.includes('aksara'),
-        hasDocumentSections: !!document.querySelector('.document-section'),
-        hasAksaraSections: !!document.querySelector('.aksara-section'),
-        totalSections: document.querySelectorAll('.document-section').length,
-        isAksaraDoc: hasAksara
-    });
-
     if (!hasAksara) {
-        console.log('❌ Not an Aksara document, skipping sync');
         return;
     }
 
@@ -66,7 +52,6 @@ function initializeVSCodeSync() {
     // Override navigation functions to notify VS Code
     if (typeof originalNextSlide === 'function') {
         window.nextSlide = function() {
-            console.log('📤 nextSlide() called - notifying editor');
             originalNextSlide.call(this);
             notifyEditorOfSlideChange();
         };
@@ -74,30 +59,33 @@ function initializeVSCodeSync() {
 
     if (typeof originalPreviousSlide === 'function') {
         window.previousSlide = function() {
-            console.log('📤 previousSlide() called - notifying editor');
             originalPreviousSlide.call(this);
             notifyEditorOfSlideChange();
         };
     }
 
-    // Handle scroll events for document mode - only when preview has focus
+    // Detect if this is presentation mode (not scrollable)
+    // Presentations have showSlide function or the body has limited scroll height
+    const hasShowSlide = typeof window.showSlide === 'function';
+    const hasNavFunctions = typeof window.nextSlide === 'function' && typeof window.previousSlide === 'function';
+    const isScrollable = document.documentElement.scrollHeight > document.documentElement.clientHeight + 10;
+    const isPresentationMode = hasShowSlide || (hasNavFunctions && !isScrollable);
+
+    // Handle scroll events ONLY for document mode (not presentation)
     let lastScrollTime = 0;
 
     const scrollHandler = () => {
-        if (isUpdatingFromEditor) {
-            console.log('🔒 Skipping scroll sync - updating from editor');
+        // Skip scroll handling for presentation mode
+        if (isPresentationMode) {
             return;
         }
 
-        // Only sync if preview has focus or was recently interacted with
-        if (!document.hasFocus()) {
-            console.log('🔒 Skipping scroll sync - preview not focused');
+        if (isUpdatingFromEditor || !document.hasFocus()) {
             return;
         }
 
         const now = Date.now();
         if (now - lastScrollTime < 100) {
-            console.log('🔒 Skipping scroll sync - debouncing');
             return;
         }
 
@@ -106,17 +94,14 @@ function initializeVSCodeSync() {
         }
         window.aksaraSyncTimeout = setTimeout(() => {
             const section = getCurrentSection();
-            const line = estimateLineFromScroll();
-
-            console.log('📤 Preview focused - scroll event notifying editor:', { section, line });
 
             // Update slide counter for document mode
             updateSlideCounterForDocument(section);
 
             vscode.postMessage({
                 type: 'preview-scroll',
-                section: section,
-                line: line
+                section: section
+                // Don't send line - let editor calculate it from section
             });
 
             lastScrollTime = Date.now();
@@ -125,14 +110,12 @@ function initializeVSCodeSync() {
 
     const messageHandler = (event) => {
         const message = event.data;
-        console.log('📨 Message from editor:', message);
 
         // Validate that the message is for the current document
         if (message.sourceFile && window.documentUri) {
             const currentFile = window.documentUri.split('/').pop();
             const messageFile = message.sourceFile.split('/').pop();
             if (currentFile !== messageFile) {
-                console.log('🔒 Ignoring message for different file:', messageFile, 'vs current:', currentFile);
                 return;
             }
         }
@@ -143,12 +126,16 @@ function initializeVSCodeSync() {
     };
 
     // Register event listeners and track them for cleanup
-    window.addEventListener('scroll', scrollHandler);
-    window.addEventListener('message', messageHandler);
+    // Only register scroll handler for document mode
+    if (!isPresentationMode) {
+        window.addEventListener('scroll', scrollHandler);
+        activeListeners.push(() => {
+            window.removeEventListener('scroll', scrollHandler);
+        });
+    }
 
-    // Track cleanup functions
+    window.addEventListener('message', messageHandler);
     activeListeners.push(() => {
-        window.removeEventListener('scroll', scrollHandler);
         window.removeEventListener('message', messageHandler);
         if (window.aksaraSyncTimeout) {
             clearTimeout(window.aksaraSyncTimeout);
@@ -156,28 +143,24 @@ function initializeVSCodeSync() {
         }
     });
 
-    console.log('✅ VS Code sync initialized with', activeListeners.length, 'tracked listeners');
-
-    // Initialize slide counter for document mode
-    const initialSection = getCurrentSection();
-    updateSlideCounterForDocument(initialSection);
+    // Initialize counters
+    if (isPresentationMode) {
+        // For presentation mode, update slide counter
+        const initialSlide = getCurrentSlideIndex();
+        updateSlideCounter(initialSlide);
+    } else {
+        // For document mode, update page counter
+        const initialSection = getCurrentSection();
+        updateSlideCounterForDocument(initialSection);
+    }
 }
 
 function notifyEditorOfSlideChange() {
-    if (isUpdatingFromEditor) {
-        console.log('🔒 Skipping slide notification - updating from editor');
-        return;
-    }
-
-    // Only notify if preview has focus
-    if (!document.hasFocus()) {
-        console.log('🔒 Skipping slide notification - preview not focused');
+    if (isUpdatingFromEditor || !document.hasFocus()) {
         return;
     }
 
     const currentSection = getCurrentSlideIndex();
-    console.log('📤 Preview focused - notifying editor of slide change:', currentSection);
-
     vscode.postMessage({
         type: 'slide-changed',
         section: currentSection
@@ -187,7 +170,6 @@ function notifyEditorOfSlideChange() {
 function getCurrentSlideIndex() {
     // Try to get current slide from global variable
     if (typeof window.currentSlide !== 'undefined') {
-        console.log('📊 Using window.currentSlide:', window.currentSlide);
         return window.currentSlide;
     }
 
@@ -195,65 +177,45 @@ function getCurrentSlideIndex() {
     const activeSlide = document.querySelector('.document-section.active, .slide.active');
     if (activeSlide) {
         const slides = document.querySelectorAll('.document-section, .slide');
-        const index = Array.from(slides).indexOf(activeSlide);
-        console.log('📊 Found active slide at index:', index, 'of', slides.length, 'total slides');
-        return index;
+        return Array.from(slides).indexOf(activeSlide);
     }
 
-    console.log('📊 No active slide found, returning 0');
     return 0;
 }
 
 function getCurrentSection() {
     // For presentations, use the current slide index directly
     if (typeof window.currentSlide !== 'undefined') {
-        console.log('📊 Presentation mode - using currentSlide:', window.currentSlide);
         return window.currentSlide;
     }
 
-    // For documents: calculate based on scroll position and HR elements
-    console.log('📊 Document mode - calculating section from scroll position');
+    // For documents: Calculate based on which section is most visible in viewport
+    const sectionDivs = Array.from(document.querySelectorAll('.document-section'));
 
-    // Get all HR elements (from --- separators in markdown)
-    const hrElements = Array.from(document.querySelectorAll('hr'));
-    console.log('📊 Found', hrElements.length, 'HR elements in document');
+    if (sectionDivs.length > 0) {
+        let maxVisibleArea = 0;
+        let mostVisibleSection = 0;
 
-    if (hrElements.length === 0) {
-        console.log('📊 No HR elements found, document has 1 section');
-        return 0;
-    }
+        // Find which section has the most visible area in viewport
+        for (let i = 0; i < sectionDivs.length; i++) {
+            const section = sectionDivs[i];
+            const rect = section.getBoundingClientRect();
 
-    // The sections are: [content before first HR] [content between HRs] [content after last HR]
-    // So for N HR elements, we have N+1 sections (0 to N)
-    const totalSections = hrElements.length + 1;
-    const scrollTop = window.scrollY + window.innerHeight / 3; // Use 1/3 for better detection
+            // Calculate visible area of this section in viewport
+            const visibleTop = Math.max(0, rect.top);
+            const visibleBottom = Math.min(window.innerHeight, rect.bottom);
+            const visibleArea = Math.max(0, visibleBottom - visibleTop);
 
-    let currentSection = 0;
-
-    // Check each HR element to see if we've scrolled past it
-    for (let i = 0; i < hrElements.length; i++) {
-        const hr = hrElements[i];
-        const rect = hr.getBoundingClientRect();
-        const hrTop = rect.top + window.scrollY;
-
-        if (scrollTop > hrTop) {
-            currentSection = i + 1;
-        } else {
-            break;
+            if (visibleArea > maxVisibleArea) {
+                maxVisibleArea = visibleArea;
+                mostVisibleSection = i;
+            }
         }
+
+        return mostVisibleSection;
     }
 
-    // Clamp to valid range
-    currentSection = Math.max(0, Math.min(currentSection, totalSections - 1));
-
-    console.log('📊 Document section calculation:', {
-        scrollTop,
-        totalSections,
-        currentSection,
-        hrPositions: hrElements.map(hr => hr.getBoundingClientRect().top + window.scrollY)
-    });
-
-    return currentSection;
+    return 0;
 }
 
 function estimateLineFromScroll() {
@@ -264,66 +226,53 @@ function estimateLineFromScroll() {
 }
 
 function handleEditorSync(line, section) {
-    console.log('🔄 Handling editor sync:', { line, section });
-    console.log('🔍 Available globals:', {
-        currentSlide: typeof window.currentSlide,
-        showSlide: typeof window.showSlide,
-        nextSlide: typeof window.nextSlide,
-        previousSlide: typeof window.previousSlide
-    });
-
     isUpdatingFromEditor = true;
 
-    // Check if this is a presentation (has navigation functions or document sections)
-    const hasNavFunctions = typeof window.nextSlide === 'function' || typeof window.previousSlide === 'function';
-    const hasDocumentSections = document.querySelectorAll('.document-section').length > 0;
-    const isPresentation = hasNavFunctions || hasDocumentSections;
+    // Check if this is a presentation
+    const hasShowSlide = typeof window.showSlide === 'function';
+    const hasNavFunctions = typeof window.nextSlide === 'function' && typeof window.previousSlide === 'function';
+    const isScrollable = document.documentElement.scrollHeight > document.documentElement.clientHeight + 10;
+    const isPresentation = hasShowSlide || (hasNavFunctions && !isScrollable);
 
     if (isPresentation) {
-        // Get total slides and clamp section to valid range
+        // Presentation mode: use slide navigation
         const totalSlides = document.querySelectorAll('.document-section').length;
         const clampedSection = Math.max(0, Math.min(section, totalSlides - 1));
-
-        console.log('🎯 Presentation mode detected - navigating to slide:', clampedSection, 'of', totalSlides, '(requested:', section, ')');
-
-        // Navigate to the target slide using available methods
         navigateToSlide(clampedSection);
-
     } else {
-        // For document mode: scroll to position
-        console.log('📄 Document mode - scrolling to section:', section);
+        // Document mode: scroll to section and update counter
         scrollToSection(section);
-        // Update slide counter for document mode
         updateSlideCounterForDocument(section);
     }
 
     setTimeout(() => {
         isUpdatingFromEditor = false;
-        console.log('🔓 Editor sync lock released');
-    }, 500);
+    }, 200);
 }
 
 function navigateToSlide(targetSlide) {
-    console.log('🎯 Navigating to slide:', targetSlide);
+    // Method 1: Direct showSlide function (most reliable)
+    if (typeof window.showSlide === 'function') {
+        window.showSlide(targetSlide);
+        updateSlideCounter(targetSlide);
+        return;
+    }
 
-    // Method 1: Use currentSlide + showSlide if available
+    // Method 2: Set currentSlide and call showSlide
     if (typeof window.currentSlide !== 'undefined' && typeof window.showSlide === 'function') {
-        console.log('📞 Method 1: Using currentSlide + showSlide');
         window.currentSlide = targetSlide;
         window.showSlide(targetSlide);
         updateSlideCounter(targetSlide);
         return;
     }
 
-    // Method 2: Use nextSlide/previousSlide to navigate step by step
+    // Method 3: Use nextSlide/previousSlide to navigate step by step
     if (typeof window.nextSlide === 'function' && typeof window.previousSlide === 'function') {
-        console.log('📞 Method 2: Using nextSlide/previousSlide navigation');
         navigateWithStepFunctions(targetSlide);
         return;
     }
 
-    // Method 3: Manual slide visibility control
-    console.log('📞 Method 3: Manual slide visibility update');
+    // Method 4: Manual slide visibility control
     updateSlideVisibility(targetSlide);
     updateSlideCounter(targetSlide);
 }
@@ -331,35 +280,39 @@ function navigateToSlide(targetSlide) {
 function navigateWithStepFunctions(targetSlide) {
     // Get current slide index
     let currentSlide = getCurrentSlideFromDOM();
-    console.log('🎯 Current slide:', currentSlide, 'Target slide:', targetSlide);
 
     if (currentSlide === targetSlide) {
-        console.log('✅ Already on target slide');
+        updateSlideCounter(targetSlide);
         return;
     }
 
-    // Navigate step by step to target slide
-    const steps = targetSlide - currentSlide;
-    console.log('🎯 Need to move', steps, 'steps');
+    // Calculate steps needed
+    const stepsNeeded = Math.abs(targetSlide - currentSlide);
+    let stepsTaken = 0;
 
     function stepToTarget() {
         const current = getCurrentSlideFromDOM();
-        if (current === targetSlide) {
-            console.log('✅ Reached target slide:', targetSlide);
+
+        // Stop if we reached target or taken too many steps
+        if (current === targetSlide || stepsTaken >= stepsNeeded + 5) {
             updateSlideCounter(targetSlide);
             return;
         }
 
+        stepsTaken++;
+
         if (current < targetSlide) {
-            console.log('➡️ Next slide (', current, '→', current + 1, ')');
             window.nextSlide();
-        } else {
-            console.log('⬅️ Previous slide (', current, '→', current - 1, ')');
+        } else if (current > targetSlide) {
             window.previousSlide();
+        } else {
+            // Already at target
+            updateSlideCounter(targetSlide);
+            return;
         }
 
         // Continue stepping with small delay
-        setTimeout(stepToTarget, 50);
+        setTimeout(stepToTarget, 100);
     }
 
     stepToTarget();
@@ -394,53 +347,56 @@ function updateSlideCounter(slideIndex) {
     const counter = document.getElementById('current-slide');
     if (counter) {
         counter.textContent = (slideIndex + 1).toString();
-        console.log('📊 Updated slide counter to:', slideIndex + 1);
     }
 }
 
 function updateSlideCounterForDocument(currentSection) {
-    console.log('📊 Updating document slide counter for section:', currentSection);
+    // Get total sections from .document-section divs
+    const sectionDivs = document.querySelectorAll('.document-section');
+    const totalSections = sectionDivs.length || 1;
 
-    // Calculate total sections based on HR elements (same logic as getCurrentSection)
-    const hrElements = document.querySelectorAll('hr');
-    const totalSections = hrElements.length + 1; // N HR elements = N+1 sections
+    // Find all page number elements and update them based on their position
+    const allFooters = document.querySelectorAll('.document-footer');
 
-    console.log('📊 Counter update:', {
-        currentSection: currentSection + 1,
-        totalSections,
-        hrCount: hrElements.length
-    });
+    if (allFooters.length > 0) {
+        // Update each footer's page number to match its actual position
+        allFooters.forEach((footer, index) => {
+            const pageNumberEl = footer.querySelector('.page-number');
+            if (pageNumberEl) {
+                const text = pageNumberEl.textContent || '';
+                const pageMatch = text.match(/(Page|Halaman)\s+\d+\s*(of|dari|\/)\s*\d+/i);
 
-    // Look for any element containing slide numbers
-    const allElements = document.querySelectorAll('*');
-    let foundElements = 0;
+                if (pageMatch) {
+                    const prefix = pageMatch[1];
+                    const separator = pageMatch[2];
+                    // Each footer shows its own page number (index + 1)
+                    const newText = `${prefix} ${index + 1} ${separator} ${totalSections}`;
 
-    allElements.forEach(element => {
-        const text = element.textContent || '';
-        // Look for patterns like "1 of 5", "Page 1/5", etc.
-        if (text.match(/\b\d+\s*(of|\/)\s*\d+\b/)) {
-            foundElements++;
-            console.log('📊 Found counter element:', element.tagName, element.className, 'text:', text);
-            const newText = text.replace(/\b\d+(\s*(?:of|\/)\s*)\d+\b/, (currentSection + 1) + '$1' + totalSections);
-            if (newText !== text) {
-                element.textContent = newText;
-                console.log('📊 Updated slide counter via pattern match:', text, '->', newText);
+                    if (pageNumberEl.textContent !== newText) {
+                        pageNumberEl.textContent = newText;
+                    }
+                }
             }
-        }
-    });
+        });
+    }
 
-    console.log('📊 Found and updated', foundElements, 'counter elements');
+    // Also update the #current-page indicator if it exists (in document controls)
+    const currentPageEl = document.getElementById('current-page');
+    if (currentPageEl) {
+        const newPage = (currentSection + 1).toString();
+        if (currentPageEl.textContent !== newPage) {
+            currentPageEl.textContent = newPage;
+        }
+    }
 
     // Also update window.currentSlide if it exists (for compatibility)
     if (typeof window.currentSlide !== 'undefined') {
         window.currentSlide = currentSection;
-        console.log('📊 Updated window.currentSlide to:', currentSection);
     }
 }
 
 function updateSlideVisibility(targetSlide) {
     const slides = document.querySelectorAll('.document-section');
-    console.log('🎞️ Manually updating slide visibility - target:', targetSlide, 'total slides:', slides.length);
 
     slides.forEach((slide, index) => {
         slide.style.display = index === targetSlide ? 'block' : 'none';
@@ -453,60 +409,32 @@ function updateSlideVisibility(targetSlide) {
 }
 
 function scrollToSection(sectionIndex) {
-    console.log('📄 Document scrollToSection called for index:', sectionIndex);
+    const sectionDivs = Array.from(document.querySelectorAll('.document-section'));
 
-    // Get HR elements (same logic as getCurrentSection)
-    const hrElements = Array.from(document.querySelectorAll('hr'));
-    const totalSections = hrElements.length + 1;
+    if (sectionDivs.length > 0) {
+        const totalSections = sectionDivs.length;
+        const clampedIndex = Math.max(0, Math.min(sectionIndex, totalSections - 1));
 
-    console.log('📄 Scroll to section:', {
-        sectionIndex,
-        totalSections,
-        hrCount: hrElements.length
-    });
-
-    // Clamp section index to valid range
-    const clampedIndex = Math.max(0, Math.min(sectionIndex, totalSections - 1));
-
-    if (clampedIndex === 0) {
-        // Section 0: scroll to top of document
-        console.log('📄 Scrolling to section 0 (top of document)');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else if (clampedIndex <= hrElements.length) {
-        // Section N: scroll to HR element N-1
-        const targetHr = hrElements[clampedIndex - 1];
-        if (targetHr) {
-            console.log('📄 Scrolling to HR element', clampedIndex - 1, 'for section', clampedIndex);
-            targetHr.scrollIntoView({
+        const targetSection = sectionDivs[clampedIndex];
+        if (targetSection) {
+            // Scroll to make the section visible at top of viewport
+            targetSection.scrollIntoView({
                 behavior: 'smooth',
                 block: 'start'
             });
-        } else {
-            console.log('📄 HR element not found, using fallback scroll');
-            const percentage = clampedIndex / totalSections;
-            const scrollY = percentage * (document.documentElement.scrollHeight - window.innerHeight);
-            window.scrollTo({ top: scrollY, behavior: 'smooth' });
+
+            // Update page counter after scroll
+            setTimeout(() => {
+                updateSlideCounterForDocument(clampedIndex);
+            }, 100);
         }
-    } else {
-        // Fallback for out-of-range sections
-        console.log('📄 Section out of range, scrolling to end');
-        window.scrollTo({
-            top: document.documentElement.scrollHeight,
-            behavior: 'smooth'
-        });
     }
 }
 
 // Initialize with retry mechanism for Aksara functions
 function tryInitializeSync() {
-    console.log('⏰ Attempting sync initialization...');
-
-    // Check if document has Aksara content
-    const hasAksaraContent = document.body.innerHTML.includes('aksara') ||
-                           document.querySelector('.document-section') ||
-                           document.querySelector('.aksara-section') ||
-                           document.querySelectorAll('hr').length > 0 ||
-                           document.querySelectorAll('h1').length > 0;
+    // Check if document has Aksara content (always has .document-section)
+    const hasAksaraContent = document.querySelector('.document-section') !== null;
 
     // Check if Aksara presentation functions are available (for presentations)
     const hasAksaraFunctions = typeof window.nextSlide === 'function' ||
@@ -514,19 +442,14 @@ function tryInitializeSync() {
                               document.querySelectorAll('.document-section').length > 0;
 
     if (hasAksaraContent) {
-        console.log('✅ Aksara content detected, initializing sync');
         initializeVSCodeSync();
     } else if (hasAksaraFunctions) {
-        console.log('⏳ Aksara functions detected but no content yet, retrying in 500ms...');
         setTimeout(tryInitializeSync, 500);
-    } else {
-        console.log('❌ No Aksara content detected, skipping sync initialization');
     }
 }
 
 // Clean up any global state from previous loads
 if (window.aksaraInitialized) {
-    console.log('🔄 Previous Aksara instance detected, cleaning up...');
     cleanupSync();
 }
 window.aksaraInitialized = true;
