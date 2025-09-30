@@ -43,6 +43,10 @@
           "light": "./aksara.png",
           "dark": "./aksara.png"
         }
+      },
+      {
+        "command": "aksara.openPreview",
+        "title": "Open Ak'sara Preview"
       }
     ],
     "menus": {
@@ -52,12 +56,16 @@
           "when": "resourceLangId == markdown",
           "group": "navigation"
         }
+      ],
+      "editor/title/context": [
+        {
+          "command": "aksara.openPreview",
+          "when": "resourceLangId == markdown",
+          "group": "1_open"
+        }
       ]
     },
     "markdown.markdownItPlugins": true,
-    "markdown.previewScripts": [
-      "./dist/preview.js"
-    ],
     "configuration": {
       "title": "Aksara Writer",
       "properties": {

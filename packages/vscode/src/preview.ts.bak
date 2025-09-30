@@ -61,9 +61,13 @@ if (typeof window !== 'undefined' && typeof acquireVsCodeApi !== 'undefined') {
             console.log('🎯 Presentation mode - switching to slide:', section);
             showSlide(section);
         } else {
-            console.log('📄 Document mode - scrolling to section:', section);
-            // For documents: scroll to approximate position
-            scrollToSection(section);
+            console.log('📄 Document mode - scrolling to position:', { line, section });
+            // For documents: use fine-grained line mapping first, then fall back to section
+            scrollToLine(line) || scrollToSection(section);
+
+            // Add visual highlighting
+            highlightActiveSection(section);
+            highlightActiveLine(line);
         }
 
         setTimeout(() => { isUpdatingFromEditor = false; }, 100);
@@ -84,6 +88,35 @@ if (typeof window !== 'undefined' && typeof acquireVsCodeApi !== 'undefined') {
                 sec.classList.add(index < section ? 'prev' : 'next');
             }
         });
+    }
+
+    function scrollToLine(line: number): boolean {
+        console.log('📍 scrollToLine - attempting line-based scroll to line:', line);
+
+        // Estimate scroll position based on line number
+        // This is an approximation since we don't have direct line mapping in HTML
+        const totalLines = estimateTotalLines();
+        if (totalLines > 0) {
+            const scrollPercent = Math.min(line / totalLines, 1);
+            const targetY = scrollPercent * (document.documentElement.scrollHeight - window.innerHeight);
+
+            console.log('✅ Scrolling to estimated position:', { line, totalLines, scrollPercent, targetY });
+            window.scrollTo({
+                top: targetY,
+                behavior: 'smooth'
+            });
+            return true;
+        }
+
+        console.log('❌ Could not estimate line position');
+        return false;
+    }
+
+    function estimateTotalLines(): number {
+        // Estimate total lines based on content height and average line height
+        const bodyHeight = document.body.scrollHeight;
+        const averageLineHeight = 24; // Approximate line height in pixels
+        return Math.ceil(bodyHeight / averageLineHeight);
     }
 
     function scrollToSection(section: number) {
@@ -127,16 +160,75 @@ if (typeof window !== 'undefined' && typeof acquireVsCodeApi !== 'undefined') {
             clearTimeout(scrollTimeout);
             scrollTimeout = setTimeout(() => {
                 const section = getCurrentSection();
+                const estimatedLine = getCurrentLine();
                 const scrollPercent = window.scrollY / (document.body.scrollHeight - window.innerHeight);
 
-                console.log('📤 Sending scroll message to extension:', { section, scrollPercent });
+                console.log('📤 Sending scroll message to extension:', { section, line: estimatedLine, scrollPercent });
                 vscode?.postMessage({
                     type: 'preview-scroll',
                     section: section,
+                    line: estimatedLine,
                     scrollPercent: scrollPercent
                 });
             }, 150);
         });
+    }
+
+    function getCurrentLine(): number {
+        // Estimate current line based on scroll position
+        const scrollPercent = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight);
+        const totalLines = estimateTotalLines();
+        const estimatedLine = Math.floor(scrollPercent * totalLines);
+
+        console.log('📍 getCurrentLine - estimated:', { scrollPercent, totalLines, estimatedLine });
+        return Math.max(0, estimatedLine);
+    }
+
+    function highlightActiveSection(section: number) {
+        // Remove previous section highlights
+        document.querySelectorAll('.aksara-section, .document-section, section').forEach(el => {
+            el.classList.remove('active');
+        });
+
+        // Add highlight to current section
+        const sections = document.querySelectorAll('.aksara-section, .document-section, section');
+        if (sections[section]) {
+            sections[section].classList.add('active');
+            console.log('✨ Highlighted section:', section);
+        } else {
+            // Fallback: highlight nearest header
+            const headers = document.querySelectorAll('h1, h2, h3');
+            if (headers[section]) {
+                headers[section].classList.add('highlight');
+                // Remove highlight after a delay
+                setTimeout(() => {
+                    headers[section].classList.remove('highlight');
+                }, 2000);
+                console.log('✨ Highlighted header fallback:', section);
+            }
+        }
+    }
+
+    function highlightActiveLine(line: number) {
+        // Remove previous line highlights
+        document.querySelectorAll('.highlight').forEach(el => {
+            el.classList.remove('highlight');
+        });
+
+        // Estimate which element corresponds to the line
+        const allElements = document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, blockquote');
+        const elementIndex = Math.min(Math.floor(line / 3), allElements.length - 1); // Rough estimate: ~3 lines per element
+
+        if (allElements[elementIndex]) {
+            allElements[elementIndex].classList.add('highlight');
+
+            // Remove highlight after a delay
+            setTimeout(() => {
+                allElements[elementIndex].classList.remove('highlight');
+            }, 3000);
+
+            console.log('✨ Highlighted element at estimated line:', { line, elementIndex, element: allElements[elementIndex].tagName });
+        }
     }
 
     function getCurrentSection(): number {
@@ -167,6 +259,7 @@ if (typeof window !== 'undefined' && typeof acquireVsCodeApi !== 'undefined') {
 
     // For presentations: setup slide navigation sync
     function setupSlideTracking() {
+        // Keyboard navigation
         document.addEventListener('keydown', (e) => {
             if (isUpdatingFromEditor) return;
 
@@ -184,13 +277,101 @@ if (typeof window !== 'undefined' && typeof acquireVsCodeApi !== 'undefined') {
             newSection = Math.max(0, Math.min(newSection, maxSections - 1));
 
             showSlide(newSection);
-
-            vscode?.postMessage({
-                type: 'slide-changed',
-                section: newSection
-            });
+            notifySlideChange(newSection);
 
             e.preventDefault();
+        });
+
+        // HTML button navigation tracking
+        setupHtmlNavigationTracking();
+    }
+
+    function setupHtmlNavigationTracking() {
+        // Track clicks on any navigation elements
+        document.addEventListener('click', (e) => {
+            if (isUpdatingFromEditor) return;
+
+            const target = e.target as HTMLElement;
+            const clickedElement = target.closest('button, a, .nav, .navigation, .slide-nav, .page-nav, [data-nav], [onclick*="slide"], [onclick*="page"], [onclick*="section"]');
+
+            if (clickedElement) {
+                console.log('🖱️ Detected navigation click:', clickedElement);
+
+                // Try to determine navigation direction/target
+                const text = clickedElement.textContent?.toLowerCase() || '';
+                const classes = clickedElement.className.toLowerCase();
+                const dataAttrs = clickedElement.getAttribute('data-section') || clickedElement.getAttribute('data-slide');
+
+                let targetSection = getCurrentSlide();
+
+                // Detect navigation type
+                if (text.includes('next') || text.includes('→') || text.includes('>') || classes.includes('next')) {
+                    targetSection++;
+                } else if (text.includes('prev') || text.includes('←') || text.includes('<') || classes.includes('prev')) {
+                    targetSection--;
+                } else if (dataAttrs) {
+                    targetSection = parseInt(dataAttrs, 10);
+                } else {
+                    // Try to extract section number from onclick or other attributes
+                    const onclickAttr = clickedElement.getAttribute('onclick') || '';
+                    const sectionMatch = onclickAttr.match(/(\d+)/);
+                    if (sectionMatch) {
+                        targetSection = parseInt(sectionMatch[1], 10);
+                    }
+                }
+
+                // Bounds check
+                const maxSections = Math.max(
+                    document.querySelectorAll('.document-section').length,
+                    document.querySelectorAll('.aksara-section').length,
+                    document.querySelectorAll('section').length
+                );
+
+                if (maxSections > 0) {
+                    targetSection = Math.max(0, Math.min(targetSection, maxSections - 1));
+
+                    console.log('🎯 Navigation detected - moving to section:', targetSection);
+
+                    // Update presentation view
+                    if (document.body.classList.contains('presentation-mode')) {
+                        showSlide(targetSection);
+                    }
+
+                    // Notify extension
+                    notifySlideChange(targetSection);
+                }
+            }
+        });
+
+        // Watch for dynamically added navigation elements
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach(mutation => {
+                if (mutation.type === 'childList') {
+                    mutation.addedNodes.forEach(node => {
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            const element = node as Element;
+                            // Check if new navigation elements were added
+                            const navElements = element.querySelectorAll('button, a, .nav, .navigation, .slide-nav, .page-nav, [data-nav]');
+                            if (navElements.length > 0) {
+                                console.log('🔄 New navigation elements detected:', navElements.length);
+                            }
+                        }
+                    });
+                }
+            });
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
+
+    function notifySlideChange(section: number) {
+        console.log('📤 Sending slide-changed message to extension:', section);
+        vscode?.postMessage({
+            type: 'slide-changed',
+            section: section
         });
     }
 
@@ -205,7 +386,8 @@ if (typeof window !== 'undefined' && typeof acquireVsCodeApi !== 'undefined') {
         console.log('🔧 Initializing sync system...', {
             hasAksara: hasAksaraDirectives(),
             hasVscode: !!vscode,
-            isPresentationMode: isPresentationType()
+            isPresentationMode: isPresentationType(),
+            url: window.location.href
         });
 
         if (hasAksaraDirectives() && vscode) {
@@ -215,13 +397,44 @@ if (typeof window !== 'undefined' && typeof acquireVsCodeApi !== 'undefined') {
             if (isPresentationType()) {
                 console.log('🎯 Setting up slide tracking for presentation mode');
                 setupSlideTracking();
+            } else {
+                console.log('📄 Setting up document mode scroll tracking');
+                // Also setup HTML navigation tracking for documents with navigation
+                setupHtmlNavigationTracking();
             }
+
+            // Add sync status indicator
+            addSyncStatusIndicator();
         } else {
             console.log('❌ Sync not initialized:', {
                 hasAksara: hasAksaraDirectives(),
                 hasVscode: !!vscode
             });
         }
+    }
+
+    function addSyncStatusIndicator() {
+        const indicator = document.createElement('div');
+        indicator.id = 'sync-status';
+        indicator.style.cssText = `
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(102, 126, 234, 0.9);
+            color: white;
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            z-index: 10000;
+            font-family: monospace;
+        `;
+        indicator.textContent = '🔗 Editor-Preview Sync Active';
+        document.body.appendChild(indicator);
+
+        // Remove after 3 seconds
+        setTimeout(() => {
+            indicator.remove();
+        }, 3000);
     }
 
     // Function to check if document has Aksara directives
@@ -349,6 +562,39 @@ if (typeof window !== 'undefined' && typeof acquireVsCodeApi !== 'undefined') {
                 box-shadow: 0 4px 20px rgba(0,0,0,0.1);
                 min-height: 29.7cm;
                 page-break-after: always;
+                transition: all 0.3s ease;
+            }
+
+            /* Active section highlighting */
+            .aksara-section.active,
+            .document-section.active,
+            section.active {
+                border-left: 4px solid #667eea !important;
+                background: rgba(102, 126, 234, 0.02) !important;
+                box-shadow: 0 4px 20px rgba(102, 126, 234, 0.15) !important;
+            }
+
+            /* Active line highlighting */
+            .active-line-indicator {
+                position: absolute;
+                left: -10px;
+                width: 4px;
+                height: 1.5em;
+                background: #667eea;
+                border-radius: 2px;
+                opacity: 0.8;
+                transition: all 0.3s ease;
+                z-index: 10;
+            }
+
+            /* Smooth highlight for paragraphs and headers */
+            p.highlight, h1.highlight, h2.highlight, h3.highlight, h4.highlight, h5.highlight, h6.highlight {
+                background: rgba(102, 126, 234, 0.1) !important;
+                border-radius: 4px;
+                padding: 0.2em 0.4em;
+                margin: -0.2em -0.4em;
+                transition: all 0.3s ease;
+                position: relative;
             }
 
             /* Aksara indicator */
