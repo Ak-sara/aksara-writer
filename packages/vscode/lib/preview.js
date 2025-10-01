@@ -27,6 +27,13 @@ let syncLockTimeout = undefined;
 function getOrCreatePreviewPanel(vscode, editor, context) {
     if (!globalPreviewPanel) {
         const fileName = path.basename(editor.document.fileName);
+
+        // Get workspace root or fall back to parent directories
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        const workspaceRoot = workspaceFolders && workspaceFolders.length > 0
+            ? workspaceFolders[0].uri
+            : vscode.Uri.file(path.resolve(path.dirname(editor.document.fileName), '../..'));
+
         globalPreviewPanel = vscode.window.createWebviewPanel(
             'aksaraPreview',
             `Ak'sara: ${fileName}`,
@@ -35,9 +42,9 @@ function getOrCreatePreviewPanel(vscode, editor, context) {
                 enableScripts: true,
                 retainContextWhenHidden: true,
                 localResourceRoots: context ? [
-                    vscode.Uri.file(path.dirname(editor.document.fileName)),
+                    workspaceRoot,
                     vscode.Uri.file(path.join(context.extensionPath, 'dist'))
-                ] : [vscode.Uri.file(path.dirname(editor.document.fileName))]
+                ] : [workspaceRoot]
             }
         );
 
@@ -313,8 +320,8 @@ function syncEditorToSlide(vscode, editor, section) {
 function fixImagePathsInHtml(vscode, html, documentPath, webview) {
     const docDir = path.dirname(documentPath);
 
-    // Fix CSS background images
-    html = html.replace(/(background-image:\s*url\(['"]?)([^'")]+)(['"]?\))/g, (match, prefix, src, suffix) => {
+    // Fix CSS background images (both background: and background-image:)
+    html = html.replace(/(background(?:-image)?:\s*[^;]*url\(['"]?)([^'")]+)(['"]?\))/g, (match, prefix, src, suffix) => {
         if (src.startsWith('data:') || src.startsWith('http') || src.startsWith('vscode-webview-resource:')) {
             return match;
         }
@@ -334,6 +341,7 @@ function fixImagePathsInHtml(vscode, html, documentPath, webview) {
             const webviewUri = webview.asWebviewUri(vscode.Uri.file(absolutePath));
             return `${prefix}${webviewUri.toString()}${suffix}`;
         } catch (error) {
+            console.warn('Failed to convert background image path:', src, error);
             return match;
         }
     });
