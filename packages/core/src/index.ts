@@ -151,13 +151,25 @@ export class AksaraConverter {
     // First, evaluate JavaScript expressions before any other processing
     let html = this.evaluateJavaScriptExpressions(markdown);
 
+    // Process code blocks FIRST (before inline code and tables) to prevent interference
+    const codeBlocks: string[] = [];
+    html = html.replace(/```(\w+)?[ \t]*\n([\s\S]*?)```/g, (match, lang, code) => {
+      let codeHtml;
+      const trimmedLang = lang ? lang.trim() : '';
+      if (trimmedLang === 'mermaid') {
+        // Use a base64-like placeholder to preserve newlines
+        codeHtml = `<pre class="mermaid">${code.trim()}</pre>`;
+      } else {
+        // Escape HTML and preserve whitespace/indentation for code
+        codeHtml = `<pre><code class="language-${trimmedLang || 'plaintext'}">${this.escapeHtml(code)}</code></pre>`;
+      }
+      const placeholder = `<!--__CODE_BLOCK_${codeBlocks.length}__-->`;
+      codeBlocks.push(codeHtml);
+      return placeholder;
+    });
+
     // Then parse tables
     html = this.parseTable(html);
-
-    // Process code blocks first (before other block elements)
-    html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
-      return `<pre><code class="${lang || ''}">${code.trim()}</code></pre>`;
-    });
 
     // Process block elements
     html = html
@@ -168,7 +180,7 @@ export class AksaraConverter {
       .replace(/^\- (.*$)/gm, '<li>$1</li>')
       .replace(/^(\d+)\. (.*$)/gm, '<li>$2</li>');
 
-    // Process inline elements
+    // Process inline elements (AFTER code blocks to avoid interference)
     html = html
       .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
         // Extract image type identifier and positioning
@@ -246,8 +258,12 @@ export class AksaraConverter {
         continue; // Skip empty lines
       }
 
+      // Check if line contains code block placeholder (as HTML comment)
+      if (line.match(/<!--__CODE_BLOCK_\d+__-->/)) {
+        processedLines.push(line);
+      }
       // Don't wrap block elements
-      if (line.match(/^<(h[1-6]|ul|ol|li|table|div|header|footer|pre)/)) {
+      else if (line.match(/^<(h[1-6]|ul|ol|li|table|div|header|footer|pre)/)) {
         processedLines.push(line);
       } else if (line.match(/^<\/(h[1-6]|ul|ol|li|table|div|header|footer|pre)/)) {
         processedLines.push(line);
@@ -263,7 +279,16 @@ export class AksaraConverter {
       }
     }
 
-    return processedLines.join('\n');
+    // Restore code blocks from placeholders BEFORE joining lines
+    const restoredLines = processedLines.map(line => {
+      let restoredLine = line;
+      codeBlocks.forEach((codeBlock, index) => {
+        restoredLine = restoredLine.replace(`<!--__CODE_BLOCK_${index}__-->`, codeBlock);
+      });
+      return restoredLine;
+    });
+
+    return restoredLines.join('\n');
   }
 
   private parseTable(markdown: string): string {
@@ -415,7 +440,8 @@ export class AksaraConverter {
     }
 
     try {
-      let absolutePath = resolve(process.cwd(), imagePath);
+      const baseDir = this.options.basePath || process.cwd();
+      let absolutePath = resolve(baseDir, imagePath);
 
       if (existsSync(absolutePath)) {
         const fileData = readFileSync(absolutePath);
@@ -424,7 +450,7 @@ export class AksaraConverter {
         return `data:${mimeType};base64,${base64Data}`;
       }
 
-      const altPath = resolve(process.cwd(), 'assets', basename(imagePath));
+      const altPath = resolve(baseDir, 'assets', basename(imagePath));
       if (existsSync(altPath)) {
         const fileData = readFileSync(altPath);
         const mimeType = this.getMimeType(altPath);
@@ -433,10 +459,10 @@ export class AksaraConverter {
       }
 
       console.warn(`Image not found: ${imagePath}`);
-      return imagePath; // Return original path as fallback
+      return imagePath;
     } catch (error) {
       console.warn(`Error resolving image path ${imagePath}:`, error);
-      return imagePath; // Return original path as fallback
+      return imagePath;
     }
   }
 
@@ -452,6 +478,17 @@ export class AksaraConverter {
       'bmp': 'image/bmp'
     };
     return mimeTypes[ext || ''] || 'image/png';
+  }
+
+  private escapeHtml(text: string): string {
+    const htmlEscapes: Record<string, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    };
+    return text.replace(/[&<>"']/g, char => htmlEscapes[char]);
   }
 }
 

@@ -4,6 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{title}}</title>
+
+    <!-- Highlight.js for syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+    <!-- Mermaid.js for diagrams -->
+    <script src="./node_modules/mermaid/dist/mermaid.min.js"></script>
+    <script>
+      if (typeof mermaid !== 'undefined') {
+        mermaid.initialize({
+          startOnLoad: true,
+          theme: 'default',
+          securityLevel: 'loose'
+        });
+      }
+    </script>
+
     <style>
         /* Base layout styles - lowest specificity */
         {{baseStyles}}
@@ -22,6 +39,27 @@
 
         /* User styles - highest specificity */
         {{userStyles}}
+
+        /* Mermaid diagram styling */
+        .mermaid {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 1rem 0;
+        }
+
+        /* Code block styling */
+        pre code {
+            display: block;
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        pre code:not(.language-mermaid) {
+            background: #2d2d2d;
+            color: #f8f8f2;
+        }
     </style>
 </head>
 <body data-type="{{documentType}}">
@@ -33,6 +71,13 @@
     <script>
         // Load external script content
         {{scriptContent}}
+
+        // Initialize syntax highlighting for non-mermaid code blocks
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('pre code:not(.language-mermaid)').forEach((block) => {
+                hljs.highlightElement(block);
+            });
+        });
     </script>
 </body>
 </html>

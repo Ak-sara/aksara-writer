@@ -220,13 +220,12 @@ export class HtmlConverter {
     // Load user CSS file last (this should override theme styles)
     if (this.directives.style) {
       try {
-        // Load custom CSS file - resolve relative to the document directory
+        const baseDir = this.options.basePath || process.cwd();
         let stylePath: string;
         if (isAbsolute(this.directives.style)) {
           stylePath = this.directives.style;
         } else {
-          // For relative paths, resolve from current working directory
-          stylePath = resolve(process.cwd(), this.directives.style);
+          stylePath = resolve(baseDir, this.directives.style);
         }
 
         if (existsSync(stylePath)) {
@@ -258,9 +257,11 @@ export class HtmlConverter {
         const width = dimensions[0];
         const height = dimensions[1];
         return `
-          .document-section {
-            width: ${width};
-            height: ${height};
+          body[data-type="document"] .document-section,
+          body:not([data-type]) .document-section {
+            width: ${width} !important;
+            height: ${height} !important;
+            min-height: ${height} !important;
             page-break-after: always;
           }
           @page {
@@ -509,7 +510,8 @@ export class HtmlConverter {
     }
 
     try {
-      let absolutePath = resolve(process.cwd(), imagePath);
+      const baseDir = this.options.basePath || process.cwd();
+      let absolutePath = resolve(baseDir, imagePath);
 
       if (existsSync(absolutePath)) {
         const fileData = readFileSync(absolutePath);
@@ -518,7 +520,7 @@ export class HtmlConverter {
         return `data:${mimeType};base64,${base64Data}`;
       }
 
-      const altPath = resolve(process.cwd(), 'assets', basename(imagePath));
+      const altPath = resolve(baseDir, 'assets', basename(imagePath));
       if (existsSync(altPath)) {
         const fileData = readFileSync(altPath);
         const mimeType = this.getMimeType(altPath);
@@ -527,10 +529,10 @@ export class HtmlConverter {
       }
 
       console.warn(`Image not found: ${imagePath}`);
-      return imagePath; // Return original path as fallback
+      return imagePath;
     } catch (error) {
       console.warn(`Error resolving image path ${imagePath}:`, error);
-      return imagePath; // Return original path as fallback
+      return imagePath;
     }
   }
 

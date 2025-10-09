@@ -15,7 +15,8 @@
     "dist",
     "src",
     "styles",
-    "templates"
+    "templates",
+    "static"
   ],
   "scripts": {
     "build": "tsc && vite build",
@@ -24,9 +25,13 @@
   },
   "dependencies": {
     "marked": "^16.3.0",
-    "puppeteer": "^24.22.0",
     "jszip": "^3.10.1",
-    "gray-matter": "^4.0.3"
+    "gray-matter": "^4.0.3",
+    "mermaid": "^11.0.0",
+    "highlight.js": "^11.9.0"
+  },
+  "optionalDependencies": {
+    "puppeteer": "^24.22.0"
   },
   "devDependencies": {
     "typescript": "^5.7.2",

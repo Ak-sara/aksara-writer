@@ -30,18 +30,15 @@ export class PdfConverter {
   private getCustomStyles(): string {
     let styles = '';
 
-    // Load custom CSS file for PDF
     if (this.directives.style) {
       try {
-        // Load custom CSS file - resolve relative to the document directory or process.cwd()
+        const baseDir = this.options.basePath || process.cwd();
         let stylePath: string;
         if (isAbsolute(this.directives.style)) {
           stylePath = this.directives.style;
         } else {
-          // First try resolving from current working directory
-          stylePath = resolve(process.cwd(), this.directives.style);
+          stylePath = resolve(baseDir, this.directives.style);
 
-          // If not found, try resolving from the directory containing the source file
           if (!existsSync(stylePath) && this.options.sourceDir) {
             stylePath = resolve(this.options.sourceDir, this.directives.style);
           }
@@ -108,11 +105,19 @@ export class PdfConverter {
 
   async convert(): Promise<ConvertResult> {
     try {
-      // Generate simple stacked HTML for PDF (no presentation CSS)
       const stackedHtml = this.generateStackedHtmlForPdf();
       const htmlWithAbsolutePaths = this.convertRelativeImagePaths(stackedHtml);
 
-      const puppeteer = await import('puppeteer');
+      let puppeteer;
+      try {
+        puppeteer = await import('puppeteer');
+      } catch (importError) {
+        return {
+          success: false,
+          error: 'PDF generation unavailable: puppeteer not installed. Install with: bun add puppeteer'
+        };
+      }
+
       const browser = await puppeteer.default.launch({
         headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox']
@@ -126,7 +131,6 @@ export class PdfConverter {
 
       await page.setContent(htmlWithAbsolutePaths, { waitUntil: 'networkidle2' });
 
-      // Wait for images to load
       await page.evaluate(() => {
         const images = Array.from(document.querySelectorAll('img'));
         return Promise.all(images.map(img => {
@@ -141,7 +145,6 @@ export class PdfConverter {
         }));
       });
 
-      // Add a small delay to ensure layout is complete
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       const pdfOptions = this.getPdfOptions();
@@ -796,7 +799,8 @@ export class PdfConverter {
     }
 
     try {
-      let absolutePath = resolve(process.cwd(), imagePath);
+      const baseDir = this.options.basePath || process.cwd();
+      let absolutePath = resolve(baseDir, imagePath);
 
       if (existsSync(absolutePath)) {
         const fileData = readFileSync(absolutePath);
@@ -805,7 +809,7 @@ export class PdfConverter {
         return `data:${mimeType};base64,${base64Data}`;
       }
 
-      const altPath = resolve(process.cwd(), 'assets', basename(imagePath));
+      const altPath = resolve(baseDir, 'assets', basename(imagePath));
       if (existsSync(altPath)) {
         const fileData = readFileSync(altPath);
         const mimeType = this.getMimeType(altPath);
@@ -863,13 +867,14 @@ export class PdfConverter {
   }
 
   private convertRelativeImagePaths(html: string): string {
+    const baseDir = this.options.basePath || process.cwd();
     const convertPath = (imagePath: string): string | null => {
       if (imagePath.startsWith('http') || imagePath.startsWith('data:') || isAbsolute(imagePath)) {
         return null;
       }
 
       try {
-        let absolutePath = resolve(process.cwd(), imagePath);
+        let absolutePath = resolve(baseDir, imagePath);
 
         if (existsSync(absolutePath)) {
           const fileData = readFileSync(absolutePath);
@@ -878,7 +883,7 @@ export class PdfConverter {
           return `data:${mimeType};base64,${base64Data}`;
         }
 
-        const altPath = resolve(process.cwd(), 'assets', basename(imagePath));
+        const altPath = resolve(baseDir, 'assets', basename(imagePath));
         if (existsSync(altPath)) {
           const fileData = readFileSync(altPath);
           const mimeType = this.getMimeType(altPath);

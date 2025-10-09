@@ -161,12 +161,9 @@ code {
 }
 
 pre {
-  background: #f6f8fa;
-  padding: 1rem;
   border-radius: 8px;
   overflow-x: auto;
   margin: 1rem 0;
-  border-left: 4px solid #667eea;
 }
 
 pre code {

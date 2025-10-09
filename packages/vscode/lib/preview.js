@@ -315,10 +315,15 @@ function syncEditorToSlide(vscode, editor, section) {
 }
 
 /**
- * Fix image paths for webview
+ * Fix image paths and node_modules references for webview
  */
 function fixImagePathsInHtml(vscode, html, documentPath, webview) {
     const docDir = path.dirname(documentPath);
+
+    // Fix node_modules references - replace with CDN for VSCode
+    html = html.replace(/(<script[^>]+src=["'])\.\/node_modules\/mermaid\/[^"']+(["'][^>]*>)/g, (match, prefix, suffix) => {
+        return `${prefix}https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js${suffix}`;
+    });
 
     // Fix CSS background images (both background: and background-image:)
     html = html.replace(/(background(?:-image)?:\s*[^;]*url\(['"]?)([^'")]+)(['"]?\))/g, (match, prefix, src, suffix) => {
@@ -380,7 +385,7 @@ function addContentSecurityPolicy(html) {
         return html.replace(
             '<head>',
             `<head>
-                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data: vscode-webview-resource: https:; script-src 'unsafe-inline'; style-src 'unsafe-inline';">`
+                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data: vscode-webview-resource: https:; script-src 'unsafe-inline' 'unsafe-eval' vscode-webview-resource: https:; style-src 'unsafe-inline' vscode-webview-resource: https:;">`
         );
     }
     return html;

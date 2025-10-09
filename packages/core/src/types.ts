@@ -6,6 +6,7 @@ export interface ConvertOptions {
   pageSize?: 'A4' | 'Letter' | 'Legal';
   orientation?: 'portrait' | 'landscape';
   sourceDir?: string;
+  basePath?: string;
 }
 
 export interface DocumentMetadata {
