@@ -11,6 +11,7 @@ import { ConvertOptions, DocumentMetadata, AksaraDirectives, DocumentSection, Co
 import { HtmlConverter } from './converters/html-converter';
 import { PdfConverter } from './converters/pdf-converter';
 import { PptxConverter } from './converters/pptx-converter';
+import { aksaraDraw } from './aksara-draw';
 
 export class AksaraConverter {
   private options: ConvertOptions;
@@ -153,14 +154,21 @@ export class AksaraConverter {
 
     // Process code blocks FIRST (before inline code and tables) to prevent interference
     const codeBlocks: string[] = [];
-    html = html.replace(/```(\w+)?[ \t]*\n([\s\S]*?)```/g, (match, lang, code) => {
+    html = html.replace(/```([\w-]+)?[ \t]*\n([\s\S]*?)```/g, (match, lang, code) => {
       let codeHtml;
       const trimmedLang = lang ? lang.trim() : '';
       if (trimmedLang === 'mermaid') {
-        // Use a base64-like placeholder to preserve newlines
         codeHtml = `<pre class="mermaid">${code.trim()}</pre>`;
+      } else if (trimmedLang === 'aksara-draw' || trimmedLang === 'aksara-org' || trimmedLang === 'aksara-flow') {
+        try {
+          const diagramType = trimmedLang === 'aksara-org' ? 'org' : trimmedLang === 'aksara-flow' ? 'flow' : undefined;
+          const diagram = aksaraDraw.parse(code.trim(), diagramType);
+          const svg = aksaraDraw.render(diagram);
+          codeHtml = `<div class="aksara-diagram">${svg}</div>`;
+        } catch (error) {
+          codeHtml = `<pre class="error">AksaraDraw Error: ${error instanceof Error ? error.message : 'Unknown error'}</pre>`;
+        }
       } else {
-        // Escape HTML and preserve whitespace/indentation for code
         codeHtml = `<pre><code class="language-${trimmedLang || 'plaintext'}">${this.escapeHtml(code)}</code></pre>`;
       }
       const placeholder = `<!--__CODE_BLOCK_${codeBlocks.length}__-->`;
