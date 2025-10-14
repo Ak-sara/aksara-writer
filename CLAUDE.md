@@ -95,6 +95,7 @@ Templates located in `packages/core/templates/` and `packages/core/styles/`:
 - `presentation.css`: Slide-based layouts
 - `document-controls.html`: Interactive preview controls
 - Indonesian business templates (invoices, proposals, reports)
+- Document/Letter Format
 
 ### Important Development Notes
 - **Bun Runtime**: All scripts use `bun run` not `npm run`
