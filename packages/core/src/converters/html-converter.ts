@@ -509,6 +509,16 @@ export class HtmlConverter {
       return imagePath;
     }
 
+    // For HTML exports, default to NOT embedding images (keep relative paths)
+    // This keeps HTML file size small
+    const shouldEmbed = this.options.embedImages ?? false;
+
+    if (!shouldEmbed) {
+      // Keep relative path as-is for HTML export
+      return imagePath;
+    }
+
+    // Embed as base64 if explicitly requested
     try {
       const baseDir = this.options.basePath || process.cwd();
       let absolutePath = resolve(baseDir, imagePath);

@@ -129,7 +129,10 @@ export class PdfConverter {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8'
       });
 
-      await page.setContent(htmlWithAbsolutePaths, { waitUntil: 'networkidle2' });
+      await page.setContent(htmlWithAbsolutePaths, {
+        waitUntil: 'networkidle2',
+        timeout: 60000 // Increase timeout to 60 seconds for documents with many mermaid diagrams
+      });
 
       await page.evaluate(() => {
         const images = Array.from(document.querySelectorAll('img'));
@@ -145,7 +148,42 @@ export class PdfConverter {
         }));
       });
 
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await page.evaluate(() => {
+        return new Promise<void>((resolve) => {
+          if (typeof (window as any).mermaid === 'undefined') {
+            console.log('Mermaid not loaded, skipping diagram rendering');
+            resolve();
+            return;
+          }
+
+          const mermaidElements = document.querySelectorAll('.mermaid, pre code.language-mermaid');
+          if (mermaidElements.length === 0) {
+            resolve();
+            return;
+          }
+
+          console.log(`Rendering ${mermaidElements.length} mermaid diagrams...`);
+          const checkInterval = setInterval(() => {
+            const rendered = Array.from(mermaidElements).every(el => {
+              return el.querySelector('svg') !== null || el.getAttribute('data-processed') === 'true';
+            });
+
+            if (rendered) {
+              clearInterval(checkInterval);
+              console.log('All mermaid diagrams rendered');
+              resolve();
+            }
+          }, 100);
+
+          setTimeout(() => {
+            clearInterval(checkInterval);
+            console.log('Mermaid rendering timeout, proceeding anyway');
+            resolve();
+          }, 15000);
+        });
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
       const pdfOptions = this.getPdfOptions();
       const pdfBuffer = await page.pdf(pdfOptions);
@@ -310,6 +348,19 @@ export class PdfConverter {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${this.metadata.title || 'Aksara Document'}</title>
+
+    <!-- Mermaid.js for diagrams -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>
+      if (typeof mermaid !== 'undefined') {
+        mermaid.initialize({
+          startOnLoad: true,
+          theme: 'default',
+          securityLevel: 'loose'
+        });
+      }
+    </script>
+
     <style>
       ${this.loadTemplate('styles/base.css')}
       ${this.getThemeStyles()}

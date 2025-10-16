@@ -1,6 +1,6 @@
 {
   "name": "aksara-writer",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Command line interface for Aksara Writer - Modern markdown converter for Indonesian businesses",
   "type": "module",
   "main": "./dist/index.js",

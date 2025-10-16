@@ -2,7 +2,7 @@
   "name": "aksara-writer-vscode",
   "displayName": "Aksara Writer",
   "description": "Modern markdown converter with Indonesian business templates",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "publisher": "ak-sara",
   "icon": "aksara.png",
   "repository": {

@@ -447,6 +447,16 @@ export class AksaraConverter {
       return imagePath;
     }
 
+    // For HTML exports, default to NOT embedding images (keep relative paths)
+    // For PDF/PPTX, default to embedding (self-contained file)
+    const shouldEmbed = this.options.embedImages ?? (this.options.format !== 'html');
+
+    if (!shouldEmbed) {
+      // Keep relative path as-is
+      return imagePath;
+    }
+
+    // Embed as base64
     try {
       const baseDir = this.options.basePath || process.cwd();
       let absolutePath = resolve(baseDir, imagePath);

@@ -320,10 +320,7 @@ function syncEditorToSlide(vscode, editor, section) {
 function fixImagePathsInHtml(vscode, html, documentPath, webview) {
     const docDir = path.dirname(documentPath);
 
-    // Fix node_modules references - replace with CDN for VSCode
-    html = html.replace(/(<script[^>]+src=["'])\.\/node_modules\/mermaid\/[^"']+(["'][^>]*>)/g, (match, prefix, suffix) => {
-        return `${prefix}https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js${suffix}`;
-    });
+    // Mermaid is already using CDN, no replacement needed
 
     // Fix CSS background images (both background: and background-image:)
     html = html.replace(/(background(?:-image)?:\s*[^;]*url\(['"]?)([^'")]+)(['"]?\))/g, (match, prefix, src, suffix) => {

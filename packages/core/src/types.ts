@@ -7,6 +7,7 @@ export interface ConvertOptions {
   orientation?: 'portrait' | 'landscape';
   sourceDir?: string;
   basePath?: string;
+  embedImages?: boolean; // default: false for HTML, true for PDF/PPTX
 }
 
 export interface DocumentMetadata {
