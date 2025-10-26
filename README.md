@@ -2,6 +2,8 @@
 
 Modern markdown-to-document converter designed for Indonesian businesses and developers.
 
+📚 **[Complete Documentation](https://ak-sara.github.io/aksara-writer/docs)** | 🌐 **[Website](https://ak-sara.github.io)** | 📦 **[NPM](https://www.npmjs.com/package/aksara-writer)**
+
 ## Overview
 
 Aksara Writer is a powerful markdown converter that generates professional documents in multiple formats (HTML, PDF, PPTX) with built-in Indonesian language support and business templates.
@@ -29,7 +31,7 @@ aksara-writer/
 ```
 ### Directives
 ```
-<!-- 
+<!--
 aksara:true
 style: ./style.css
 size: 210mmx297mm | 16:9 | 4:3
@@ -38,7 +40,7 @@ meta:
     subtitle: dokumen subtitle
 header: | left | center | right |
 footer: anything
-background: ../assets/background    
+background: ../assets/background
 -->
 ---
 page 1
@@ -46,6 +48,42 @@ page 1
 Page 2
 ---
 ```
+
+### Metadata Variables
+
+Define custom metadata and use them as variables throughout your document:
+
+```markdown
+<!--
+aksara:true
+type: document
+meta:
+    company: "PT. Aksara Digital"
+    from_name: "Heriawan Agung"
+    ref_number: "REF/2025/001"
+    any_field: "Any value"
+header: | ${meta.company} | ${new Date().toLocaleDateString('id-ID')} |
+footer: | ${meta.ref_number} | Page [page] of [total] |
+-->
+
+# Surat Penawaran
+
+**Dari**: ${meta.from_name}
+**Perusahaan**: ${meta.company}
+**Nomor**: ${meta.ref_number}
+
+| Field | Value |
+|-------|-------|
+| Perusahaan | ${meta.company} |
+| Ref No | ${meta.ref_number} |
+```
+
+**Features:**
+- ✅ Dynamic field names (not hardcoded)
+- ✅ Use anywhere in content, headers, footers
+- ✅ Error handling: `[meta.fieldname not found]` if field missing
+- ✅ Perfect for corporate letters, forms, invoices
+
 ## Quick Start
 
 ```bash

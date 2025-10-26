@@ -7,6 +7,13 @@ function initializeAksaraDocument(totalSections) {
     let controlsVisible = false;
     let hideTimeout;
 
+    // Pan/drag state
+    let panX = 0;
+    let panY = 0;
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+
 // Initialize based on document type
 document.addEventListener('DOMContentLoaded', function() {
   if (isPresentation) {
@@ -17,6 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   setupControls();
   setupKeyboardNavigation();
+  setupPanDrag();
 });
 
 function initializePresentation() {
@@ -139,6 +147,63 @@ function setupKeyboardNavigation() {
   });
 }
 
+function setupPanDrag() {
+  const aksaraDoc = document.querySelector('.aksara-document');
+  if (!aksaraDoc) return;
+
+  // Update cursor based on zoom level
+  function updateCursor() {
+    if (currentZoom > 1) {
+      aksaraDoc.style.cursor = isDragging ? 'grabbing' : 'grab';
+    } else {
+      aksaraDoc.style.cursor = 'default';
+    }
+  }
+
+  // Mouse down - start dragging
+  aksaraDoc.addEventListener('mousedown', (e) => {
+    if (currentZoom <= 1) return;
+
+    // Ignore if clicking on links or buttons
+    if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON') return;
+
+    isDragging = true;
+    startX = e.clientX - panX;
+    startY = e.clientY - panY;
+    updateCursor();
+    e.preventDefault();
+  });
+
+  // Mouse move - pan the document
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+
+    panX = e.clientX - startX;
+    panY = e.clientY - startY;
+    updateZoom();
+    e.preventDefault();
+  });
+
+  // Mouse up - stop dragging
+  document.addEventListener('mouseup', () => {
+    if (isDragging) {
+      isDragging = false;
+      updateCursor();
+    }
+  });
+
+  // Mouse leave - stop dragging
+  document.addEventListener('mouseleave', () => {
+    if (isDragging) {
+      isDragging = false;
+      updateCursor();
+    }
+  });
+
+  // Update cursor on zoom change
+  document.addEventListener('zoomchange', updateCursor);
+}
+
 // Presentation Navigation
 function nextSlide() {
   if (currentSlide < totalSlides - 1) {
@@ -255,16 +320,24 @@ function zoomOut() {
 
 function fitWidth() {
   currentZoom = 1;
+  panX = 0;
+  panY = 0;
   updateZoom();
 }
 
 function updateZoom() {
+  const aksaraDoc = document.querySelector('.aksara-document');
+  if (!aksaraDoc) return;
+
   if (isPresentation) {
-    document.querySelector('.aksara-document').style.transform =
-      `translate(-50%, -50%) scale(${currentZoom})`;
+    aksaraDoc.style.transform =
+      `translate(calc(-50% + ${panX}px), calc(-50% + ${panY}px)) scale(${currentZoom})`;
   } else {
-    document.querySelector('.aksara-document').style.transform = `scale(${currentZoom})`;
+    aksaraDoc.style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoom})`;
   }
+
+  // Dispatch custom event for cursor update
+  document.dispatchEvent(new Event('zoomchange'));
 }
 
 // Fullscreen

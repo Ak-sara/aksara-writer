@@ -25,10 +25,7 @@ export interface AksaraDirectives {
   type?: 'document' | 'presentation';
   style?: string;
   size?: string;
-  meta?: {
-    title?: string;
-    subtitle?: string;
-  };
+  meta?: Record<string, string>; // Allow any key-value pairs
   header?: string;
   footer?: string;
   background?: string;

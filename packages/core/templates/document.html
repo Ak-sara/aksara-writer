@@ -16,7 +16,26 @@
         mermaid.initialize({
           startOnLoad: true,
           theme: 'default',
-          securityLevel: 'loose'
+          securityLevel: 'loose',
+          gantt: {
+            useWidth: 1100  // Set a reasonable default width for Gantt charts
+          }
+        });
+
+        // After Mermaid renders, resize Gantt charts to fit container
+        window.addEventListener('load', () => {
+          setTimeout(() => {
+            document.querySelectorAll('.mermaid.gantt-chart svg').forEach(svg => {
+              // Remove fixed width/height attributes
+              svg.removeAttribute('width');
+              svg.removeAttribute('height');
+              // Set viewBox if not present
+              if (!svg.getAttribute('viewBox')) {
+                const bbox = svg.getBBox();
+                svg.setAttribute('viewBox', `0 0 ${bbox.width} ${bbox.height}`);
+              }
+            });
+          }, 500);
         });
       }
     </script>

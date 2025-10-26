@@ -100,13 +100,30 @@ export class HtmlConverter {
     const footerContent = this.directives.footer || '';
     const totalPages = this.sections.length;
 
-    const processedFooter = this.markdownToHtml(
-      footerContent.replace(/\[page\]/g, pageNumber.toString()).replace(/\[total\]/g, totalPages.toString())
-    );
+    // If custom footer provided, split by | like header does
+    if (footerContent) {
+      const parts = footerContent.split('|').filter(part => part !== '');
+      const processedParts = parts.map(part => {
+        const replaced = part.trim()
+          .replace(/\[page\]/g, pageNumber.toString())
+          .replace(/\[total\]/g, totalPages.toString());
+        return this.markdownToHtml(replaced);
+      });
 
+      const footerItems = processedParts.map((part, index) =>
+        `<div class="footer-item">${part}</div>`
+      ).join('');
+
+      return `
+        <footer class="document-footer">
+          ${footerItems}
+        </footer>
+      `;
+    }
+
+    // Default footer if none provided
     return `
       <footer class="document-footer">
-        <div class="footer-content">${processedFooter}</div>
         <div class="page-number">Halaman ${pageNumber} dari ${totalPages}</div>
       </footer>
     `;
@@ -454,6 +471,17 @@ export class HtmlConverter {
   }
 
   private safeEval(expression: string): any {
+    // Handle meta variable access: meta.fieldname
+    if (expression.startsWith('meta.')) {
+      const fieldName = expression.substring(5).trim();
+      if (this.directives.meta && fieldName in this.directives.meta) {
+        return this.directives.meta[fieldName];
+      }
+      // Error handling: field not found
+      console.warn(`Metadata field not found: ${fieldName}`);
+      return `[meta.${fieldName} not found]`;
+    }
+
     // Only allow safe expressions - primarily Date functions
     if (expression.includes('new Date()')) {
       // Handle date expressions

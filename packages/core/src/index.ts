@@ -97,15 +97,29 @@ export class AksaraConverter {
           directives.background = trimmed.replace('background:', '').trim();
         } else if (trimmed.startsWith('meta:')) {
           directives.meta = {};
-        } else if (trimmed.includes('title:') && directives.meta) {
-          directives.meta.title = trimmed.replace(/.*title:/, '').trim();
-          if (directives.meta.title) {
-            this.metadata.title = directives.meta.title;
+        } else if (directives.meta !== undefined && trimmed.includes(':')) {
+          // Parse any meta field dynamically: "fieldname: value"
+          const colonIndex = trimmed.indexOf(':');
+          const key = trimmed.substring(0, colonIndex).trim();
+          let value = trimmed.substring(colonIndex + 1).trim();
+
+          // Strip surrounding quotes if present
+          if ((value.startsWith('"') && value.endsWith('"')) ||
+              (value.startsWith("'") && value.endsWith("'"))) {
+            value = value.substring(1, value.length - 1);
           }
-        } else if (trimmed.includes('subtitle:') && directives.meta) {
-          directives.meta.subtitle = trimmed.replace(/.*subtitle:/, '').trim();
-          if (directives.meta.subtitle) {
-            this.metadata.subtitle = directives.meta.subtitle;
+
+          if (key && value) {
+            directives.meta[key] = value;
+
+            // Also update DocumentMetadata for known fields
+            if (key === 'title') {
+              this.metadata.title = value;
+            } else if (key === 'subtitle') {
+              this.metadata.subtitle = value;
+            } else if (key === 'author') {
+              this.metadata.author = value;
+            }
           }
         }
       });
@@ -158,7 +172,10 @@ export class AksaraConverter {
       let codeHtml;
       const trimmedLang = lang ? lang.trim() : '';
       if (trimmedLang === 'mermaid') {
-        codeHtml = `<pre class="mermaid">${code.trim()}</pre>`;
+        // Detect Gantt charts for special styling
+        const isGantt = code.trim().toLowerCase().includes('gantt');
+        const ganttClass = isGantt ? ' gantt-chart' : '';
+        codeHtml = `<pre class="mermaid${ganttClass}">${code.trim()}</pre>`;
       } else if (trimmedLang === 'aksara-draw' || trimmedLang === 'aksara-org' || trimmedLang === 'aksara-flow') {
         try {
           const diagramType = trimmedLang === 'aksara-org' ? 'org' : trimmedLang === 'aksara-flow' ? 'flow' : undefined;
@@ -312,7 +329,8 @@ export class AksaraConverter {
         `<tr>${row.map((cell: string) => `<td>${cell}</td>`).join('')}</tr>`
       ).join('');
 
-      return `<table><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table>`;
+      // Add newline after table to ensure proper parsing of subsequent markdown elements
+      return `<table><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table>\n`;
     });
   }
 
@@ -356,6 +374,17 @@ export class AksaraConverter {
   }
 
   private safeEval(expression: string): any {
+    // Handle meta variable access: meta.fieldname
+    if (expression.startsWith('meta.')) {
+      const fieldName = expression.substring(5).trim();
+      if (this.directives.meta && fieldName in this.directives.meta) {
+        return this.directives.meta[fieldName];
+      }
+      // Error handling: field not found
+      console.warn(`Metadata field not found: ${fieldName}`);
+      return `[meta.${fieldName} not found]`;
+    }
+
     // Only allow safe expressions - primarily Date functions
     if (expression.includes('new Date()')) {
       // Handle date expressions

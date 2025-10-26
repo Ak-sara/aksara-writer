@@ -90,6 +90,42 @@ body:not([data-type]) .document-section {
   margin-top: auto;
 }
 
+/* Footer items - same layout logic as header */
+.document-footer .footer-item {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+/* First item: align left */
+.document-footer .footer-item:first-child {
+  justify-content: flex-start;
+}
+
+/* Last item: align right */
+.document-footer .footer-item:last-child {
+  justify-content: flex-end;
+}
+
+/* Middle items: center align */
+.document-footer .footer-item:not(:first-child):not(:last-child) {
+  justify-content: center;
+}
+
+/* Special case: if only one item, center it */
+.document-footer .footer-item:only-child {
+  justify-content: center;
+}
+
+/* Special case: if only two items, first left, second right */
+.document-footer .footer-item:first-child:nth-last-child(2) {
+  justify-content: flex-start;
+}
+
+.document-footer .footer-item:last-child:nth-child(2) {
+  justify-content: flex-end;
+}
+
 .section-content {
   flex: 1;
   padding: 2rem;
