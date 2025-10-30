@@ -1,8 +1,32 @@
-/* Default Theme - Indonesian Business */
+/**
+ * Default Theme - Professional Indonesian Business
+ *
+ * Shared color palette and components for both documents and presentations
+ * Based on professional styling with callout boxes and rich components
+ *
+ * Color Palette:
+ *   Primary:   #667eea (Purple-blue)
+ *   Secondary: #764ba2 (Deep purple)
+ *   Success:   #50c878 (Green)
+ *   Warning:   #ffd93d (Yellow)
+ *   Danger:    #ff6b6b (Red)
+ *   Info:      #4299e1 (Blue)
+ *   Neutral:   #2d3748 (Dark gray)
+ *   Light:     #f7fafc (Off-white)
+ */
+
+/* ========================================
+   Base Colors
+   ======================================== */
+
 body {
   background: #1a1a1a;
-  color: #2c3e50;
+  color: #2d3748;
 }
+
+/* ========================================
+   Document Structure Colors
+   ======================================== */
 
 .document-title {
   color: white;
@@ -18,84 +42,248 @@ body {
 }
 
 .document-section {
-  background: #f8f9fa;
+  background: white;
   box-shadow: 0 4px 20px rgba(0,0,0,0.1);
   border: 1px solid #ddd;
 }
 
 .document-header {
-  color: #666;
-  border-bottom: 1px solid rgba(255,255,255,0.2);
+  color: #718096;
 }
 
 .document-footer {
-  color: #6c757d;
+  color: #718096;
 }
 
-/* Typography colors */
+/* ========================================
+   Typography Colors
+   ======================================== */
+
 h1 {
-  color: #2c3e50;
-  border-bottom: 3px solid #667eea;
+  color: #667eea;
+  border-bottom-color: #764ba2;
 }
 
-h2, h3 {
-  color: #34495e;
+h2 {
+  color: #764ba2;
 }
 
-h4, h5, h6 {
+h3 {
+  color: #2d3748;
+}
+
+h4 {
+  color: #4a5568;
+}
+
+h5, h6 {
   color: #5a6c7d;
 }
 
-/* Links */
+/* ========================================
+   Links
+   ======================================== */
+
 a {
-  color: #667eea;
-  border-bottom: 1px solid transparent;
+  color: #3182ce;
+  border-bottom: 1px solid #90cdf4;
 }
 
 a:hover {
-  border-bottom: 1px solid #667eea;
+  color: #2c5282;
+  border-bottom-color: #3182ce;
 }
 
-/* Code */
+/* ========================================
+   Code Blocks
+   ======================================== */
+
 code {
-  background: #ecf0f1;
-  color: #d73a49;
+  background-color: #f7fafc;
+  border: 1px solid #e2e8f0;
+  color: #e53e3e;
 }
 
 pre {
-  color: #ecf0f1;
+  background-color: #2d3748;
+  color: #e2e8f0;
 }
 
-/* Tables */
+pre code {
+  background: none;
+  border: none;
+  color: #e2e8f0;
+}
+
+/* ========================================
+   Tables
+   ======================================== */
+
+thead {
+  background-color: #667eea;
+  color: white;
+}
+
 th {
-  background: #34495e;
+  background-color: #667eea;
   color: white;
 }
 
 td {
-  border-bottom: 1px solid #e9ecef;
-}
-
-tr:nth-child(odd) {
-  background: #ffffff;  /* Odd rows - white background */
+  border-bottom: 1px solid #e2e8f0;
 }
 
 tr:nth-child(even) {
-  background: #f8f9fa;  /* Even rows - light gray background */
+  background-color: #f7fafc;
 }
 
-/* Blockquotes */
+tr:hover {
+  background-color: #edf2f7;
+}
+
+/* ========================================
+   Blockquotes
+   ======================================== */
+
 blockquote {
+  background-color: #f7fafc;
   border-left: 4px solid #667eea;
-  background: #f8f9fa;
+  color: #4a5568;
 }
 
+/* Remove the large quote mark - too distracting */
 blockquote::before {
-  content: '"';
-  font-size: 4rem;
-  color: #667eea;
-  position: absolute;
-  top: -0.5rem;
-  left: 0.5rem;
-  opacity: 0.3;
+  display: none;
+}
+
+/* ========================================
+   Callout Boxes - Professional Components
+   ======================================== */
+
+/* Key findings / highlights (Yellow accent) */
+.highlight,
+.key-findings {
+  background-color: #fffbeb;
+  border: 2px solid #ffd93d;
+  border-radius: 5px;
+  padding: 20px;
+  margin: 20px 0;
+  page-break-inside: avoid;
+}
+
+.highlight h3,
+.key-findings h3 {
+  color: #744210;
+  margin-top: 0;
+}
+
+/* Success metrics (Green) */
+.success {
+  background-color: #f0fff4;
+  border-left: 4px solid #50c878;
+  padding: 15px 20px;
+  margin: 20px 0;
+  page-break-inside: avoid;
+}
+
+.success h3, .success h4 {
+  color: #22543d;
+}
+
+/* Warning/caution boxes (Yellow) */
+.warning {
+  background-color: #fffaf0;
+  border-left: 4px solid #ffd93d;
+  padding: 15px 20px;
+  margin: 20px 0;
+  page-break-inside: avoid;
+}
+
+.warning h3, .warning h4 {
+  color: #744210;
+}
+
+/* Danger/critical boxes (Red) */
+.danger {
+  background-color: #fff5f5;
+  border-left: 4px solid #ff6b6b;
+  padding: 15px 20px;
+  margin: 20px 0;
+  page-break-inside: avoid;
+}
+
+.danger h3, .danger h4 {
+  color: #742a2a;
+}
+
+/* Info boxes (Blue) */
+.info {
+  background-color: #ebf8ff;
+  border-left: 4px solid #4299e1;
+  padding: 15px 20px;
+  margin: 20px 0;
+  page-break-inside: avoid;
+}
+
+.info h3, .info h4 {
+  color: #2c5282;
+}
+
+/* ========================================
+   Color Utility Classes
+   ======================================== */
+
+/* Text colors */
+.text-primary { color: #667eea; }
+.text-secondary { color: #764ba2; }
+.text-success { color: #50c878; }
+.text-warning { color: #744210; }
+.text-danger { color: #ff6b6b; }
+.text-info { color: #4299e1; }
+.text-muted { color: #718096; }
+
+/* Background colors */
+.bg-primary {
+  background-color: #667eea;
+  color: white;
+  padding: 10px 15px;
+  border-radius: 4px;
+}
+
+.bg-secondary {
+  background-color: #764ba2;
+  color: white;
+  padding: 10px 15px;
+  border-radius: 4px;
+}
+
+.bg-success {
+  background-color: #50c878;
+  color: white;
+  padding: 10px 15px;
+  border-radius: 4px;
+}
+
+.bg-light {
+  background-color: #f7fafc;
+  padding: 10px 15px;
+  border-radius: 4px;
+}
+
+/* ========================================
+   Print Optimizations
+   ======================================== */
+
+@media print {
+  /* Ensure callout boxes print well */
+  .highlight, .key-findings,
+  .success, .warning, .danger, .info {
+    page-break-inside: avoid;
+  }
+
+  /* Ensure colored backgrounds print */
+  .bg-primary, .bg-secondary, .bg-success {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }

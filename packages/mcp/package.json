@@ -1,0 +1,53 @@
+{
+  "name": "aksara-writer-mcp",
+  "version": "0.2.0",
+  "description": "MCP server for Aksara Writer - provides documentation and templates via Model Context Protocol",
+  "type": "module",
+  "bin": "./dist/index.js",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "docs",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.20.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  },
+  "keywords": [
+    "mcp",
+    "aksara",
+    "writer"
+  ],
+  "author": "Ak'sara Initiative",
+  "license": "BSD-3-Clause",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ak-sara/aksara-writer.git",
+    "directory": "packages/mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/ak-sara/aksara-writer/issues"
+  },
+  "homepage": "https://ak-sara.github.io",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

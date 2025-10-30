@@ -1,0 +1,296 @@
+# Aksara Writer LLM Documentation
+
+This directory contains documentation files optimized for Large Language Models (LLMs) to help them understand and work with Aksara Writer.
+
+## Available Documentation Files
+
+### Root Documentation
+- `/llms-full.txt` - Complete documentation (8000+ tokens) - This current file
+- `/llms-medium.txt` - Compressed documentation (4000+ tokens) - Coming soon
+- `/llms-small.txt` - Highly compressed documentation (2000+ tokens) - Coming soon
+
+### Package-Specific Documentation
+- `/aksara-writer-core/llms.txt` - Core conversion engine documentation - Coming soon
+- `/aksara-writer-cli/llms.txt` - Command-line interface documentation - Coming soon
+- `/aksara-writer-vscode/llms.txt` - VS Code extension documentation - Coming soon
+
+---
+
+# Aksara Writer - Complete Documentation for LLMs
+
+Aksara Writer is a modern markdown-to-document converter designed specifically for Indonesian businesses, providing professional document generation with built-in Indonesian language support and business templates.
+
+## Core Concepts
+
+Aksara Writer transforms markdown documents into professional PDFs, HTML presentations, and PPTX files using custom directives and Indonesian business formatting.
+
+### Basic Usage
+
+```bash
+# Install CLI
+npm install -g aksara-writer
+
+# Convert markdown to PDF
+aksara convert document.md --format pdf
+
+# Convert to HTML presentation
+aksara convert presentation.md --format html
+
+# Convert to PowerPoint
+aksara convert slides.md --format pptx
+```
+
+### Document Directives
+
+Every Aksara document starts with configuration directives in HTML comments:
+
+```markdown
+<!--
+aksara:true
+type: document | presentation
+size: A4 | 16:9 | 4:3 | 210mmx297mm
+style: ./custom.css
+meta:
+    title: Document Title
+    subtitle: Document Subtitle
+    author: Author Name
+header: | Company Name | Document Type | ${new Date().toLocaleDateString('id-ID')} |
+footer: Halaman [page] dari [total] - Dibuat dengan Aksara Writer
+background: ./background.jpg
+-->
+
+# Document Content Here
+```
+
+## Document Types
+
+### Document Mode (`type: document`)
+- A4 portrait layout optimized for business documents
+- Multi-page support with headers/footers
+- Indonesian business templates (invoices, proposals, reports)
+
+### Presentation Mode (`type: presentation`)
+- Slide-based layout with section breaks (`---`)
+- Responsive typography using `clamp()` functions
+- Fullscreen presentation support
+
+## Advanced Features
+
+### Custom Image Positioning
+```markdown
+![bg t:0 l:0 w:100% h:100%](background.png)  # Full background
+![fg r:20px t:50px w:100px](logo.png)       # Positioned foreground
+![lg h:60px](header-logo.png)               # Logo with height constraint
+![wm opacity:0.3](watermark.png)            # Watermark overlay
+```
+
+### Section Classes
+```markdown
+---
+<!-- class:cover -->
+# Cover Slide Content
+
+---
+<!-- class:quote -->
+## Quote or Highlight Section
+
+---
+<!-- class:divider -->
+### Section Divider
+```
+
+### Indonesian Business Templates
+
+#### Invoice Template
+```markdown
+<!--
+aksara:true
+template: invoice
+style: ./templates/invoice.css
+meta:
+    title: Faktur Penjualan
+header: | PT. Perusahaan | NPWP: 01.234.567.8-901.000 | ${new Date().toLocaleDateString('id-ID')} |
+-->
+
+# FAKTUR PENJUALAN
+
+| No | Deskripsi | Qty | Harga | Total |
+|----|-----------|-----|-------|-------|
+| 1  | Jasa Konsultasi | 10 | Rp 500.000 | **Rp 5.000.000** |
+```
+
+#### Business Proposal Template
+```markdown
+<!--
+aksara:true
+template: proposal
+size: A4
+meta:
+    title: Proposal Bisnis
+    subtitle: Kerjasama Strategis
+-->
+
+# PROPOSAL BISNIS
+## Executive Summary
+
+**Latar Belakang:** [Penjelasan bisnis]
+**Tujuan:** [Objektif proposal]
+**Investasi:** Rp [jumlah]
+```
+
+## Responsive Typography
+
+Aksara Writer uses responsive typography that scales with viewport:
+
+```css
+/* Base responsive scaling */
+font-size: clamp(1rem, 3vh, 1.5rem);
+
+/* Heading scales */
+h1 { font-size: clamp(2.5rem, 8vh, 4rem); }
+h2 { font-size: clamp(2rem, 6vh, 3rem); }
+h3 { font-size: clamp(1.5rem, 4.5vh, 2.25rem); }
+```
+
+## Custom Styling
+
+### CSS Class Mapping
+- `.document-section` → Target individual pages/slides
+- `.section-content` → Main content area
+- `.document-header` → Header area
+- `.document-footer` → Footer area
+- `.page-number` → Page numbering
+
+### Example Custom Styles
+```css
+.document-section:first-child {
+    text-align: right;
+    color: #CCC;
+}
+
+.document-section:first-child h1,
+.document-section:first-child h3 {
+    color: #FFF;
+}
+
+.section-content {
+    background-color: rgba(255,255,255,0.8);
+    border-radius: 1rem;
+    padding: 2rem;
+}
+```
+
+## Indonesian Language Features
+
+### Date Formatting
+```markdown
+Tanggal: ${new Date().toLocaleDateString('id-ID')}
+Tahun: ${new Date().getFullYear()}
+```
+
+### Currency Formatting
+```markdown
+Total: Rp 21.140.000
+Terbilang: *Dua Puluh Satu Juta Seratus Empat Puluh Ribu Rupiah*
+```
+
+### Business Document Standards
+- NPWP formatting: `01.234.567.8-901.000`
+- Address formatting: Indonesian postal conventions
+- Tax compliance templates
+- Government document formats
+
+## API Usage (Node.js)
+
+```typescript
+import { AksaraConverter } from 'aksara-writer-core';
+
+const converter = new AksaraConverter({
+  format: 'pdf',
+  locale: 'id',
+  theme: 'corporate'
+});
+
+const result = await converter.convert(markdownContent);
+if (result.success) {
+  fs.writeFileSync('output.pdf', result.data);
+}
+```
+
+## Available Themes
+- `default`: Clean Indonesian business style
+- `minimal`: Minimalist design
+- `corporate`: Formal corporate documents
+- `government`: Indonesian government standards
+
+## Available Templates
+- `invoice`: Tax-compliant Indonesian invoices
+- `proposal`: Business proposal format
+- `report`: Corporate reporting template
+- `contract`: Legal contract template
+- `letter`: Official letter format
+
+## Common Patterns
+
+### Multi-page Document
+```markdown
+<!--
+aksara:true
+type: document
+-->
+
+# Page 1 Content
+
+---
+
+# Page 2 Content
+
+---
+
+# Page 3 Content
+```
+
+### Presentation Slides
+```markdown
+<!--
+aksara:true
+type: presentation
+size: 16:9
+-->
+
+# Title Slide
+
+---
+
+## Content Slide
+- Point 1
+- Point 2
+- Point 3
+
+---
+
+## Conclusion
+```
+
+### Mixed Content with Backgrounds
+```markdown
+![bg t:0 l:0 w:100% h:100%](background.jpg)
+
+# Content Over Background
+
+Regular markdown content appears over the background image.
+
+![fg r:20px t:20px w:80px](logo.png)
+```
+
+## Error Handling
+
+Common issues and solutions:
+
+1. **Missing directive block**: Documents must start with `<!-- aksara:true -->`
+2. **Invalid image paths**: Use relative paths from document location
+3. **CSS not loading**: Ensure style path is relative to document
+4. **Font overflow**: Use responsive `clamp()` sizing for presentations
+5. **Background not showing**: Check image path and positioning syntax
+
+This documentation covers the essential patterns for using Aksara Writer effectively for Indonesian business document generation.

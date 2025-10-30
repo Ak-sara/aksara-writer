@@ -65,7 +65,6 @@ body:not([data-type]) .document-section {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 2rem;
   color: #666;
   font-size: 0.9rem;
   border-bottom: 1px solid rgba(255,255,255,0.2);
@@ -75,7 +74,6 @@ body:not([data-type]) .document-section {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 2rem;
   color: #6c757d;
   font-size: 0.8rem;
   margin-top: auto;
@@ -83,7 +81,6 @@ body:not([data-type]) .document-section {
 
 .section-content {
   flex: 1;
-  padding: 2rem;
   overflow-y: hidden;
 }
 
@@ -94,7 +91,7 @@ h1 {
   margin: 1rem 0 0.8rem 0;
   font-weight: 700;
   line-height: 1.2;
-  border-bottom: 2px solid #667eea;
+  border-bottom: 1px solid #667eea;
   padding-bottom: 0.5rem;
 }
 
@@ -245,10 +242,6 @@ img {
     width: 95vw;
     min-height: calc(95vw * 1.414);
     margin-bottom: 1rem;
-  }
-
-  .section-content {
-    padding: 1rem;
   }
 
   h1 { font-size: 1.5rem; }

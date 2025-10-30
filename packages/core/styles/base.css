@@ -42,7 +42,6 @@ body:not([data-type]) .document-section {
 .document-header {
   display: flex;
   align-items: center;
-  padding: 1rem 2rem;
   font-size: 0.9rem;
   width: 100%;
 }
@@ -85,7 +84,6 @@ body:not([data-type]) .document-section {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 2rem;
   font-size: 0.8rem;
   margin-top: auto;
 }
@@ -128,7 +126,6 @@ body:not([data-type]) .document-section {
 
 .section-content {
   flex: 1;
-  padding: 2rem;
   overflow-y: hidden;
 }
 
@@ -289,7 +286,7 @@ img {
   }
 
   .section-content {
-    padding: 1rem;
+    padding: 4rem 0rem;
   }
 
   h1 { font-size: 1.5rem; }

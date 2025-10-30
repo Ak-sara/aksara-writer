@@ -1,8 +1,31 @@
-# CLAUDE.md
+# MCP project
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Objective 
+Create MCP (Model Context Protocol) project for aksara-writer
 
-## Development Commands
+## Structure
+```
+./
+├── packages/
+│   ├── core/        # Core conversion engine (TypeScript)
+│   ├── cli/         # Command line interface
+│   └── vscode/      # VS Code extension
+│   └── mcp/         # MCP project is here
+└── CLAUDE.md        # this file
+```
+
+## todo
+1. setup mcp project in ./packages/mcp
+2. make Structurized Docs: You would split your aksara-writer-llms.txt file into logical markdown files (e.g., installation.md, api-reference.md, core-concepts.md).
+3. find other feature usage/guides or tricks by scanning function on ./packages/core, ./packages/cli, ./packages/vscode, or reading ./CHANGELOG.md, README.md, CLAUDE.md, add to "Structurized Docs"
+4. Implement Core Commands:
+    * `list-sections`: This command in your tool would read the directory of markdown files and return a JSON list of the available documentation sections.
+    * `get-documentation`: This command would take a section name (e.g., "api-reference") and return the content of that specific file.
+
+
+## Reference
+- Get started building your own server: https://modelcontextprotocol.io/docs/develop/build-server
+- Aksara Writer LLM Documentation ./aksara-writer-llms.txt
 
 ### Core Development
 ```bash

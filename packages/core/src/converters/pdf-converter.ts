@@ -280,7 +280,7 @@ export class PdfConverter {
       .section-content {
         flex: 1 !important;
         height: 100% !important;
-        ${isPresentation ? 'display: flex !important; flex-direction: column !important; justify-content: center !important; padding: 2rem !important;' : 'padding: 2rem !important;'}
+        ${isPresentation ? 'display: flex !important; flex-direction: column !important; justify-content: center !important; padding: 2rem !important;' : 'padding: 2rem 0!important;'}
       }
     </style>
 </head>
@@ -571,7 +571,7 @@ export class PdfConverter {
 
       .section-content {
         flex: 1 !important;
-        ${isPresentation ? 'display: flex !important; flex-direction: column !important; justify-content: center !important; padding: 2rem !important;' : 'padding: 2rem !important;'}
+        ${isPresentation ? 'display: flex !important; flex-direction: column !important; justify-content: center !important; padding: 2rem !important;' : 'padding: 2rem 0!important;'}
         overflow: hidden !important;
       }
 
