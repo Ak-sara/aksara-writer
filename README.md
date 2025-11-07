@@ -25,9 +25,10 @@ aksara-writer/
 │   ├── core/           # Core conversion engine (TypeScript)
 │   ├── cli/            # Command line interface
 │   └── vscode/         # VS Code extension
+│   └── mcp/            # MCP project is here
 ├── templates/          # Indonesian business templates
-├── themes/            # Document themes
-└── examples/          # Example documents
+├── themes/             # Document themes
+└── examples/           # Example documents
 ```
 ### Directives
 ```

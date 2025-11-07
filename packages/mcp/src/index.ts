@@ -66,7 +66,60 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   const uri = request.params.uri;
 
   if (uri === 'aksara://essential-guide') {
-    const content = readDoc(path.join(docsDir, 'essential-guide.md'));
+    let content = readDoc(path.join(docsDir, 'essential-guide.md'));
+    
+    // Append asset organization best practices to essential guide
+    const assetOrganizationInfo = `
+
+---
+
+## Asset Organization Best Practices
+
+When working with Aksara Writer projects, it's essential to organize your assets properly:
+
+### Required Directory Structure
+\`\`\`
+project-root/
+├── document.md
+├── assets/
+│   ├── style.css          # Custom styling
+│   ├── logo.svg           # Logo files  
+│   ├── background.jpg     # Background images
+│   └── other-images/      # Other image assets
+\`\`\`
+
+### Creating the Structure
+\`\`\`
+mkdir -p assets
+touch assets/style.css
+\`\`\`
+
+### Document Configuration with Organized Assets
+\`\`\`markdown
+<!--
+aksara:true
+type: document
+style: ./assets/style.css
+header: | ![Logo h:60px](./assets/logo.svg) | Document Title | Date |
+background: ./assets/background.jpg
+meta:
+    title: "Document Title"
+    author: "Author Name"
+    date: "\${new Date().toLocaleDateString('id-ID')}"
+-->
+\`\`\`
+
+### Why This Structure?
+- Maintains project consistency
+- Prevents scattered asset problems
+- Enables proper version control
+- Improves collaboration workflows
+
+---
+
+`;
+    content += assetOrganizationInfo;
+    
     return {
       contents: [
         {
@@ -85,6 +138,15 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
+      // Asset management & organization tools (highest priority for custom styling)
+      {
+        name: 'organize_styling_assets',
+        description: 'Organize styling assets in proper directory structure. Use when user wants custom CSS, themes, logos, backgrounds. Creates ./assets/ directory with style.css, logo.svg/png, background.jpg/png. Always organize custom styling assets in dedicated directory with mkdir -p assets, touch assets/style.css, and guide for image assets.',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
       // Intent-based document creation tools
       {
         name: 'help_create_report',
@@ -145,7 +207,15 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       // Reference and customization tools
       {
         name: 'get_formatting_reference',
-        description: 'Get comprehensive formatting reference. Use when user asks about formatting, styling, customization, images, tables, or specific features.',
+        description: 'Get comprehensive formatting reference. Use when user asks about formatting, styling, customization, images, tables, or specific features. ALWAYS organize custom styling assets in dedicated ./assets/ directory structure with style.css, logo files, and background images.',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
+      {
+        name: 'help_with_custom_styling',
+        description: 'Help with custom CSS and styling options. Use when user wants to customize appearance, colors, fonts, or layout. Provides CSS examples and styling best practices. IMPORTANT: Always organize styling assets in ./assets/ directory structure.',
         inputSchema: {
           type: 'object',
           properties: {},
@@ -206,11 +276,164 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
 
   try {
+    // Asset management & organization tools (highest priority for custom styling)
+    if (name === 'organize_styling_assets') {
+      const assetOrganizationGuide = `# Organizing Styling Assets for Aksara Writer
+
+## Directory Structure
+When creating custom styling, organize your assets in the following structure:
+
+\`\`\`
+document-project/
+├── document.md
+├── assets/
+│   ├── style.css
+│   ├── logo.svg
+│   └── background.jpg
+\`\`\`
+
+## 1. Create Directory Structure
+Use these commands:
+\`\`\`
+mkdir -p assets
+\`\`\`
+
+## 2. Create CSS File
+Create a style.css file with:
+\`\`\`
+touch assets/style.css
+\`\`\`
+
+## 3. Custom CSS Template
+Add this content to assets/style.css:
+\`\`\`css
+/* Custom theme for Aksara Writer */
+.document-section {
+  font-family: Arial, sans-serif;
+}
+
+.document-section:first-child {
+  text-align: right;
+  color: #CCC;
+}
+
+.document-section:first-child h1,
+.document-section:first-child h3 {
+  color: #FFF;
+}
+
+.section-content {
+  background-color: rgba(255,255,255,0.8);
+  border-radius: 1rem;
+  padding: 2rem;
+}
+
+/* Header and footer styling */
+.document-header {
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.document-footer {
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-top: 2px solid #dee2e6;
+}
+
+/* Special styling for cover page */
+.document-section:first-child {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+\`\`\`
+
+## 4. Add Assets
+- Place your logo in assets/logo.svg (or .png, .jpg)
+- Place background images in assets/background.jpg (or .png)
+- Ensure image files are properly sized and formatted
+- Guide the user to add appropriate image files
+
+## 5. Document Configuration
+Configure your document.md with:
+\`\`\`markdown
+<!--
+aksara:true
+type: document
+style: ./assets/style.css
+header: | ![Logo h:60px](./assets/logo.svg) | Document Title | Date |
+background: ./assets/background.jpg
+meta:
+    title: "Your Document Title"
+    author: "Author Name"
+    date: "\${new Date().toLocaleDateString('id-ID')}"
+-->
+\`\`\`
+
+## Complete Implementation
+After organizing the assets, implement your document with custom styling following the above pattern.
+`;
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: assetOrganizationGuide,
+          },
+        ],
+      };
+    }
+
     // Intent-based document creation tools
     if (name === 'help_create_report') {
       const quickStart = readDocsFromDir(path.join(docsDir, 'quick-start'));
       const formatting = readDoc(path.join(docsDir, 'formatting', 'metadata-variables.md'));
       const example = readDoc(path.join(docsDir, 'examples', 'report.md'));
+
+      // Add asset organization guidance to report creation
+      const assetGuidance = `# Asset Organization for Reports
+
+## Recommended Directory Structure
+\`\`\`
+project-root/
+├── report.md
+├── assets/
+│   ├── style.css          # Custom styling
+│   ├── logo.svg           # Logo files  
+│   └── background.jpg     # Background images
+\`\`\`
+
+### Creating the Structure
+\`\`\`
+mkdir -p assets
+touch assets/style.css
+\`\`\`
+
+## Report with Organized Assets
+\`\`\`markdown
+<!--
+aksara:true
+template: report
+style: ./assets/style.css
+header: | ![Logo h:60px](./assets/logo.svg) | Report Title | Date |
+background: ./assets/background.jpg
+meta:
+    title: "Report Title"
+    author: "Author Name"
+    date: "\${new Date().toLocaleDateString('id-ID')}"
+-->
+
+# Your Report Content Here
+\`\`\`
+
+This structure ensures proper asset management and follows Aksara Writer best practices.
+`;
 
       return {
         content: [
@@ -220,6 +443,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                   `⚠️ **IMPORTANT:** Your response MUST use aksara-writer formatting. Start with the directive block shown below.\n\n` +
                   `Even if you're summarizing a PDF or file attachment, format the output using this structure.\n\n` +
                   `## Quick Start Guide\n\n${quickStart}\n\n` +
+                  `## ${assetGuidance}\n\n` +
                   `## Metadata & Variables\n\n${formatting}\n\n` +
                   `## Complete Example\n\n\`\`\`markdown\n${example}\n\`\`\`\n\n` +
                   `**When creating the report:**\n` +
@@ -237,11 +461,50 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const templates = readDoc(path.join(docsDir, 'formatting', 'indonesian-business-templates.md'));
       const example = readDoc(path.join(docsDir, 'examples', 'proposal.md'));
 
+      // Add asset organization guidance to proposal creation
+      const assetGuidance = `# Asset Organization for Proposals
+
+## Recommended Directory Structure
+\`\`\`
+project-root/
+├── proposal.md
+├── assets/
+│   ├── style.css          # Custom styling
+│   ├── logo.svg           # Logo files  
+│   └── background.jpg     # Background images
+\`\`\`
+
+### Creating the Structure
+\`\`\`
+mkdir -p assets
+touch assets/style.css
+\`\`\`
+
+## Proposal with Organized Assets
+\`\`\`markdown
+<!--
+aksara:true
+template: proposal
+style: ./assets/style.css
+header: | ![Logo h:60px](./assets/logo.svg) | Proposal Title | Date |
+background: ./assets/background.jpg
+meta:
+    title: "Proposal Title"
+    author: "Author Name"
+    date: "\${new Date().toLocaleDateString('id-ID')}"
+-->
+
+# Your Proposal Content Here
+\`\`\`
+
+This structure ensures proper asset management and follows Aksara Writer best practices.
+`;
+
       return {
         content: [
           {
             type: 'text',
-            text: `# Creating a Business Proposal\n\n${templates}\n\n## Complete Example\n\n\`\`\`markdown\n${example}\n\`\`\``,
+            text: `# Creating a Business Proposal\n\n${templates}\n\n${assetGuidance}\n\n## Complete Example\n\n\`\`\`markdown\n${example}\n\`\`\``,
           },
         ],
       };
@@ -251,11 +514,50 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const templates = readDoc(path.join(docsDir, 'formatting', 'indonesian-business-templates.md'));
       const example = readDoc(path.join(docsDir, 'examples', 'invoice.md'));
 
+      // Add asset organization guidance to invoice creation
+      const assetGuidance = `# Asset Organization for Invoices
+
+## Recommended Directory Structure
+\`\`\`
+project-root/
+├── invoice.md
+├── assets/
+│   ├── style.css          # Custom styling
+│   ├── logo.svg           # Logo files  
+│   └── background.jpg     # Background images
+\`\`\`
+
+### Creating the Structure
+\`\`\`
+mkdir -p assets
+touch assets/style.css
+\`\`\`
+
+## Invoice with Organized Assets
+\`\`\`markdown
+<!--
+aksara:true
+template: invoice
+style: ./assets/style.css
+header: | ![Logo h:60px](./assets/logo.svg) | Invoice Title | Date |
+background: ./assets/background.jpg
+meta:
+    title: "Invoice Title"
+    author: "Author Name"
+    date: "\${new Date().toLocaleDateString('id-ID')}"
+-->
+
+# Your Invoice Content Here
+\`\`\`
+
+This structure ensures proper asset management and follows Aksara Writer best practices.
+`;
+
       return {
         content: [
           {
             type: 'text',
-            text: `# Creating an Invoice\n\n${templates}\n\n## Complete Example\n\n\`\`\`markdown\n${example}\n\`\`\``,
+            text: `# Creating an Invoice\n\n${templates}\n\n${assetGuidance}\n\n## Complete Example\n\n\`\`\`markdown\n${example}\n\`\`\``,
           },
         ],
       };
@@ -265,11 +567,50 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const patterns = readDoc(path.join(docsDir, 'quick-start', 'common-patterns.md'));
       const example = readDoc(path.join(docsDir, 'examples', 'presentation.md'));
 
+      // Add asset organization guidance to presentation creation
+      const assetGuidance = `# Asset Organization for Presentations
+
+## Recommended Directory Structure
+\`\`\`
+project-root/
+├── presentation.md
+├── assets/
+│   ├── style.css          # Custom styling
+│   ├── logo.svg           # Logo files  
+│   └── background.jpg     # Background images
+\`\`\`
+
+### Creating the Structure
+\`\`\`
+mkdir -p assets
+touch assets/style.css
+\`\`\`
+
+## Presentation with Organized Assets
+\`\`\`markdown
+<!--
+aksara:true
+type: presentation
+style: ./assets/style.css
+header: | ![Logo h:60px](./assets/logo.svg) | Presentation Title | Date |
+background: ./assets/background.jpg
+meta:
+    title: "Presentation Title"
+    author: "Author Name"
+    date: "\${new Date().toLocaleDateString('id-ID')}"
+-->
+
+# Your Presentation Content Here
+\`\`\`
+
+This structure ensures proper asset management and follows Aksara Writer best practices.
+`;
+
       return {
         content: [
           {
             type: 'text',
-            text: `# Creating a Presentation\n\n${patterns}\n\n## Complete Example\n\n\`\`\`markdown\n${example}\n\`\`\``,
+            text: `# Creating a Presentation\n\n${patterns}\n\n${assetGuidance}\n\n## Complete Example\n\n\`\`\`markdown\n${example}\n\`\`\``,
           },
         ],
       };
@@ -278,12 +619,51 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (name === 'help_create_document') {
       const quickStart = readDocsFromDir(path.join(docsDir, 'quick-start'));
       const example = readDoc(path.join(docsDir, 'examples', 'document.md'));
+      
+      // Add asset organization guidance to document creation
+      const assetGuidance = `# Asset Organization for Documents
+
+## Recommended Directory Structure
+\`\`\`
+project-root/
+├── document.md
+├── assets/
+│   ├── style.css          # Custom styling
+│   ├── logo.svg           # Logo files  
+│   └── background.jpg     # Background images
+\`\`\`
+
+### Creating the Structure
+\`\`\`
+mkdir -p assets
+touch assets/style.css
+\`\`\`
+
+## Document with Organized Assets
+\`\`\`markdown
+<!--
+aksara:true
+type: document
+style: ./assets/style.css
+header: | ![Logo h:60px](./assets/logo.svg) | Document Title | Date |
+background: ./assets/background.jpg
+meta:
+    title: "Document Title"
+    author: "Author Name"
+    date: "\${new Date().toLocaleDateString('id-ID')}"
+-->
+
+# Your Content Here
+\`\`\`
+
+This structure ensures proper asset management and follows Aksara Writer best practices.
+`;
 
       return {
         content: [
           {
             type: 'text',
-            text: `# Creating a Document\n\n${quickStart}\n\n## Complete Example\n\n\`\`\`markdown\n${example}\n\`\`\``,
+            text: `# Creating a Document\n\n${quickStart}\n\n${assetGuidance}\n\n## Complete Example\n\n\`\`\`markdown\n${example}\n\`\`\``,
           },
         ],
       };
@@ -292,11 +672,50 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (name === 'help_create_contract') {
       const example = readDoc(path.join(docsDir, 'examples', 'contract.md'));
 
+      // Add asset organization guidance to contract creation
+      const assetGuidance = `# Asset Organization for Contracts
+
+## Recommended Directory Structure
+\`\`\`
+project-root/
+├── contract.md
+├── assets/
+│   ├── style.css          # Custom styling
+│   ├── logo.svg           # Logo files  
+│   └── background.jpg     # Background images
+\`\`\`
+
+### Creating the Structure
+\`\`\`
+mkdir -p assets
+touch assets/style.css
+\`\`\`
+
+## Contract with Organized Assets
+\`\`\`markdown
+<!--
+aksara:true
+template: contract
+style: ./assets/style.css
+header: | ![Logo h:60px](./assets/logo.svg) | Contract Title | Date |
+background: ./assets/background.jpg
+meta:
+    title: "Contract Title"
+    author: "Author Name"
+    date: "\${new Date().toLocaleDateString('id-ID')}"
+-->
+
+# Your Contract Content Here
+\`\`\`
+
+This structure ensures proper asset management and follows Aksara Writer best practices.
+`;
+
       return {
         content: [
           {
             type: 'text',
-            text: `# Creating a Contract\n\n## Complete Example\n\n\`\`\`markdown\n${example}\n\`\`\``,
+            text: `# Creating a Contract\n\n${assetGuidance}\n\n## Complete Example\n\n\`\`\`markdown\n${example}\n\`\`\``,
           },
         ],
       };
@@ -305,11 +724,50 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (name === 'help_create_letter') {
       const example = readDoc(path.join(docsDir, 'examples', 'letter.md'));
 
+      // Add asset organization guidance to letter creation
+      const assetGuidance = `# Asset Organization for Letters
+
+## Recommended Directory Structure
+\`\`\`
+project-root/
+├── letter.md
+├── assets/
+│   ├── style.css          # Custom styling
+│   ├── logo.svg           # Logo files  
+│   └── background.jpg     # Background images
+\`\`\`
+
+### Creating the Structure
+\`\`\`
+mkdir -p assets
+touch assets/style.css
+\`\`\`
+
+## Letter with Organized Assets
+\`\`\`markdown
+<!--
+aksara:true
+template: letter
+style: ./assets/style.css
+header: | ![Logo h:60px](./assets/logo.svg) | Letter Title | Date |
+background: ./assets/background.jpg
+meta:
+    title: "Letter Title"
+    author: "Author Name"
+    date: "\${new Date().toLocaleDateString('id-ID')}"
+-->
+
+# Your Letter Content Here
+\`\`\`
+
+This structure ensures proper asset management and follows Aksara Writer best practices.
+`;
+
       return {
         content: [
           {
             type: 'text',
-            text: `# Creating an Official Letter\n\n## Complete Example\n\n\`\`\`markdown\n${example}\n\`\`\``,
+            text: `# Creating an Official Letter\n\n${assetGuidance}\n\n## Complete Example\n\n\`\`\`markdown\n${example}\n\`\`\``,
           },
         ],
       };
@@ -318,12 +776,165 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     // Reference tools
     if (name === 'get_formatting_reference') {
       const formatting = readDocsFromDir(path.join(docsDir, 'formatting'));
+      const assetOrganizationGuide = `# Aksara Writer Asset Organization Best Practices
+
+## Required Directory Structure
+When creating documents with custom styling, assets, or images, ALWAYS organize your project with this structure:
+
+\`\`\`
+project-root/
+├── document.md
+├── assets/
+│   ├── style.css          # Custom styling
+│   ├── logo.svg           # Logo files
+│   ├── background.jpg     # Background images
+│   └── other-images/      # Other image assets
+\`\`\`
+
+## 1. Create Directory Structure
+\`\`\`
+mkdir -p assets
+\`\`\`
+
+## 2. Asset Management Commands
+\`\`\`
+touch assets/style.css
+\`\`\`
+
+## 3. Document Configuration with Organized Assets
+\`\`\`markdown
+<!--
+aksara:true
+type: document
+style: ./assets/style.css
+header: | ![Logo h:60px](./assets/logo.svg) | Document Title | Date |
+background: ./assets/background.jpg
+meta:
+    title: "Document Title"
+    author: "Author Name"
+    date: "\${new Date().toLocaleDateString('id-ID')}"
+-->
+\`\`\`
+
+## 4. CSS Best Practices
+Organize your custom styles in ./assets/style.css:
+\`\`\`css
+/* Custom theme for Aksara Writer */
+.document-section {
+  font-family: Arial, sans-serif;
+}
+
+.document-section:first-child {
+  text-align: right;
+  color: #CCC;
+}
+
+.document-section:first-child h1,
+.document-section:first-child h3 {
+  color: #FFF;
+}
+
+.section-content {
+  background-color: rgba(255,255,255,0.8);
+  border-radius: 1rem;
+  padding: 2rem;
+}
+\`\`\`
+
+## 5. Image Positioning with Organized Assets
+Use special prefixes with organized asset paths:
+- \`![bg t:0 l:0 w:100% h:100%](./assets/background.jpg)\`  # Full background
+- \`![fg r:20px t:50px w:100px](./assets/logo.svg)\`       # Positioned foreground
+- \`![lg h:60px](./assets/header-logo.svg)\`               # Logo with height constraint
+
+## Why Asset Organization?
+- Maintains project structure consistency
+- Prevents scattered file problems
+- Makes projects easier to maintain and share
+- Enables proper version control
+- Improves collaboration workflows
+
+\`\`\`
+
+# Aksara Writer Formatting Reference\n\n${formatting}`;
+      return {
+        content: [
+          {
+            type: 'text',
+            text: assetOrganizationGuide,
+          },
+        ],
+      };
+    }
+
+    if (name === 'help_with_custom_styling') {
+      const customStylingGuide = `# Custom Styling with Aksara Writer
+
+## CSS Customization Options
+
+### CSS Class Mapping
+- \`.document-section\` → Target individual pages/slides
+- \`.section-content\` → Main content area
+- \`.document-header\` → Header area
+- \`.document-footer\` → Footer area
+- \`.page-number\` → Page numbering
+
+### Example Custom Styles
+\`\`\`css
+.document-section:first-child {
+    text-align: right;
+    color: #CCC;
+}
+
+.document-section:first-child h1,
+.document-section:first-child h3 {
+    color: #FFF;
+}
+
+.section-content {
+    background-color: rgba(255,255,255,0.8);
+    border-radius: 1rem;
+    padding: 2rem;
+}
+\`\`\`
+
+## Image Positioning
+Use special prefixes to control image placement:
+- \`![bg t:0 l:0 w:100% h:100%](background.png)\`  # Full background
+- \`![fg r:20px t:50px w:100px](logo.png)\`       # Positioned foreground
+- \`![lg h:60px](header-logo.png)\`               # Logo with height constraint
+- \`![wm opacity:0.3](watermark.png)\`            # Watermark overlay
+
+## Document Configuration
+\`\`\`markdown
+<!--
+aksara:true
+type: document
+style: ./assets/style.css
+header: | ![Logo h:60px](./assets/logo.svg) | Document Title | Date |
+background: ./assets/background.jpg
+meta:
+    title: "Document Title"
+    author: "Author Name"
+    date: "\${new Date().toLocaleDateString('id-ID')}"
+-->
+\`\`\`
+
+## Asset Organization
+ALWAYS organize styling assets in ./assets/ directory structure:
+- Create directory: \`mkdir -p assets\`
+- Create CSS: \`touch assets/style.css\`
+- Add images to the assets/ folder
+- Use relative paths in document configuration
+
+This ensures proper project structure and follows Aksara Writer best practices.
+`;
 
       return {
         content: [
           {
             type: 'text',
-            text: `# Aksara Writer Formatting Reference\n\n${formatting}`,
+            text: customStylingGuide,
           },
         ],
       };
