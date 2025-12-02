@@ -44,6 +44,8 @@ body:not([data-type]) .document-section {
   align-items: center;
   font-size: 0.9rem;
   width: 100%;
+  position: relative;
+  z-index: 10;
 }
 
 .document-header .header-item {
@@ -86,6 +88,8 @@ body:not([data-type]) .document-section {
   align-items: center;
   font-size: 0.8rem;
   margin-top: auto;
+  position: relative;
+  z-index: 10;
 }
 
 /* Footer items - same layout logic as header */
@@ -127,6 +131,8 @@ body:not([data-type]) .document-section {
 .section-content {
   flex: 1;
   overflow-y: hidden;
+  position: relative;
+  z-index: 5;
 }
 
 /* Typography structure */
@@ -259,6 +265,25 @@ img {
 .image-lg,
 .image-wm {
   display: block;
+  position: absolute;
+  pointer-events: none; /* Allow clicking through to content */
+}
+
+/* Z-index layering for images */
+.image-wm {
+  z-index: 0; /* Watermark - bottom layer */
+}
+
+.image-bg {
+  z-index: 1; /* Background - above watermark, below content */
+}
+
+.image-fg {
+  z-index: 8; /* Foreground - above content */
+}
+
+.image-lg {
+  z-index: 15; /* Logo/top layer - above everything */
 }
 
 .document-section {

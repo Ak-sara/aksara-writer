@@ -89,7 +89,10 @@ export class PdfConverter {
     .pdf-page .pdf-content {
       position: relative !important;
       z-index: 2 !important;
+      margin-top: 2em;
     }
+    .pdf-page:first-child .pdf-content {margin:5em 1em;}
+    .pdf-page:last-child .pdf-content {margin:4em 1em;}
     .pdf-page {
       display: flex !important;
       flex-direction: column !important;
@@ -107,6 +110,12 @@ export class PdfConverter {
     try {
       const stackedHtml = this.generateStackedHtmlForPdf();
       const htmlWithAbsolutePaths = this.convertRelativeImagePaths(stackedHtml);
+
+      // DEBUG: Temporarily always save HTML for debugging
+      // const { writeFileSync } = await import('fs');
+      // const debugPath = 'debug-pdf.html';
+      // writeFileSync(debugPath, htmlWithAbsolutePaths, 'utf-8');
+      // console.log(`[DEBUG] HTML saved to: ${debugPath}`);
 
       let puppeteer;
       try {
@@ -130,8 +139,8 @@ export class PdfConverter {
       });
 
       await page.setContent(htmlWithAbsolutePaths, {
-        waitUntil: 'networkidle2',
-        timeout: 60000 // Increase timeout to 60 seconds for documents with many mermaid diagrams
+        waitUntil: 'domcontentloaded',
+        timeout: 30000 // DOM loaded is faster than waiting for network
       });
 
       await page.evaluate(() => {
@@ -423,9 +432,13 @@ export class PdfConverter {
         position: relative !important;
         overflow: hidden !important;
         box-sizing: border-box !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        background-color: white !important;
         ${this.directives.background ? `background-image: url("${this.convertImagePath(this.directives.background)}") !important; background-size: 100% 100% !important; background-position: center !important; background-repeat: no-repeat !important;` : ''}
       }
-
+      
       .pdf-page:last-child {
         page-break-after: avoid !important;
       }
@@ -442,12 +455,12 @@ export class PdfConverter {
 
       /* Preserve header layout from base.css */
       .pdf-page .document-header {
-        background: transparent !important;
+        background: transparent !important; border:none; z-index:0 !important;
         /* Keep original flex layout for proper header-item alignment */
       }
-
+      
       .pdf-page .document-footer {
-        background: transparent !important;
+        background: transparent !important; padding-top:0px!important;padding-bottom:5px;
         /* Keep original flex layout */
       }
 
@@ -477,12 +490,12 @@ export class PdfConverter {
         background-position: center !important;
         background-repeat: no-repeat !important;
       }
-
+      .pdf-page>.image-bg>img{margin:0!important; z-index:1 !important;}
       /* Override any absolute positioning from original styles */
       .pdf-page * {
         position: static !important;
       }
-
+      
       /* Allow specific positioned elements */
       .pdf-page img[style*="position: absolute"],
       .pdf-page .page-background,
@@ -600,7 +613,7 @@ export class PdfConverter {
         width: 100% !important;
         height: 100% !important;
         z-index: -1 !important;
-        background-size: cover !important;
+        background-size: 100% 100% !important;
         background-position: center !important;
         background-repeat: no-repeat !important;
       }

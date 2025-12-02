@@ -51,7 +51,9 @@ body[data-type="presentation"] .document-section.active {
   visibility: visible;
   z-index: 10;
 }
-
+body[data-type="presentation"] .image-bg{
+  z-index: 9;
+}
 body[data-type="presentation"] .document-section.prev {
   opacity: 0;
   visibility: hidden;
@@ -73,7 +75,6 @@ body[data-type="presentation"] .document-header {
   align-items: center;
   color: #666;
   font-size: 0.9rem;
-  border-bottom: 1px solid rgba(255,255,255,0.2);
 }
 
 body[data-type="presentation"] .document-footer {
