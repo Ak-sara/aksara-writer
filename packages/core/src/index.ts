@@ -201,9 +201,10 @@ export class AksaraConverter {
       .replace(/^# (.*$)/gm, '<h1>$1</h1>')
       .replace(/^## (.*$)/gm, '<h2>$1</h2>')
       .replace(/^### (.*$)/gm, '<h3>$1</h3>')
-      .replace(/^#### (.*$)/gm, '<h4>$1</h4>')
-      .replace(/^\- (.*$)/gm, '<li>$1</li>')
-      .replace(/^(\d+)\. (.*$)/gm, '<li>$2</li>');
+      .replace(/^#### (.*$)/gm, '<h4>$1</h4>');
+
+    // Process nested lists
+    html = this.processLists(html);
 
     // Process inline elements (AFTER code blocks to avoid interference)
     html = html
@@ -267,10 +268,6 @@ export class AksaraConverter {
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
       .replace(/`(.*?)`/g, '<code>$1</code>');
 
-    // Wrap consecutive list items in single ul tags
-    html = html.replace(/(<li>.*?<\/li>\s*)+/g, (match) => {
-      return `<ul>${match}</ul>`;
-    });
 
     // Split into lines and wrap paragraphs more carefully
     const lines = html.split('\n');
@@ -314,6 +311,49 @@ export class AksaraConverter {
     });
 
     return restoredLines.join('\n');
+  }
+
+  private processLists(text: string): string {
+    const lines = text.split('\n');
+    const result: string[] = [];
+    const listStack: { indent: number; type: 'ul' | 'ol' }[] = [];
+
+    for (const line of lines) {
+      const ulMatch = line.match(/^(\s*)[-*] (.*)$/);
+      const olMatch = line.match(/^(\s*)\d+\. (.*)$/);
+      const match = ulMatch || olMatch;
+
+      if (match) {
+        const indent = match[1].length;
+        const content = match[2];
+        const type: 'ul' | 'ol' = ulMatch ? 'ul' : 'ol';
+
+        while (listStack.length > 0 && listStack[listStack.length - 1].indent > indent) {
+          const closed = listStack.pop()!;
+          result.push(`</${closed.type}>`);
+        }
+
+        if (listStack.length === 0 || listStack[listStack.length - 1].indent < indent) {
+          listStack.push({ indent, type });
+          result.push(`<${type}>`);
+        }
+
+        result.push(`<li>${content}</li>`);
+      } else {
+        while (listStack.length > 0) {
+          const closed = listStack.pop()!;
+          result.push(`</${closed.type}>`);
+        }
+        result.push(line);
+      }
+    }
+
+    while (listStack.length > 0) {
+      const closed = listStack.pop()!;
+      result.push(`</${closed.type}>`);
+    }
+
+    return result.join('\n');
   }
 
   private parseTable(markdown: string): string {

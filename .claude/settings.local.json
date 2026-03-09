@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd /Users/HERIAWAN/Project/_mya/aksara/aksara-writer/packages/vscode && bun run build 2>&1 | tail -20)",
+      "Bash(bun x npx webpack --mode production 2>&1 | tail -20)"
+    ]
+  }
+}

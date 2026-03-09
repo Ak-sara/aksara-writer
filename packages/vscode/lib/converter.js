@@ -118,10 +118,6 @@ function convertToHtmlSimple(markdown) {
         // Code
         .replace(/`(.*?)`/g, '<code>$1</code>')
 
-        // Lists
-        .replace(/^- (.*$)/gm, '<li>$1</li>')
-        .replace(/^(\d+)\. (.*$)/gm, '<li>$2</li>')
-
         // Images
         .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; height: auto;">')
 
@@ -146,10 +142,52 @@ function convertToHtmlSimple(markdown) {
         return `<table style="border-collapse: collapse; width: 100%;"><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table>`;
     });
 
-    // Wrap list items in ul tags
-    html = html.replace(/(<li>.*?<\/li>\s*)+/g, (match) => {
-        return `<ul>${match}</ul>`;
-    });
+    // Process nested lists
+    html = (function processLists(text) {
+        const lines = text.split('\n');
+        const result = [];
+        const listStack = []; // { indent, type }
+
+        for (const line of lines) {
+            const ulMatch = line.match(/^(\s*)[-*] (.*)$/);
+            const olMatch = line.match(/^(\s*)\d+\. (.*)$/);
+            const match = ulMatch || olMatch;
+
+            if (match) {
+                const indent = match[1].length;
+                const content = match[2];
+                const type = ulMatch ? 'ul' : 'ol';
+
+                // Close deeper levels
+                while (listStack.length > 0 && listStack[listStack.length - 1].indent > indent) {
+                    const closed = listStack.pop();
+                    result.push(`</${closed.type}>`);
+                }
+
+                // Open new level if indent increased or stack is empty
+                if (listStack.length === 0 || listStack[listStack.length - 1].indent < indent) {
+                    listStack.push({ indent, type });
+                    result.push(`<${type}>`);
+                }
+
+                result.push(`<li>${content}</li>`);
+            } else {
+                // Close all open lists before non-list line
+                while (listStack.length > 0) {
+                    const closed = listStack.pop();
+                    result.push(`</${closed.type}>`);
+                }
+                result.push(line);
+            }
+        }
+
+        while (listStack.length > 0) {
+            const closed = listStack.pop();
+            result.push(`</${closed.type}>`);
+        }
+
+        return result.join('\n');
+    })(html);
 
     // Convert line breaks to paragraphs
     const lines = html.split('\n');

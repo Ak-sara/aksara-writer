@@ -318,11 +318,62 @@ export class HtmlConverter {
     });
   }
 
+  private processLists(text: string): string {
+    const lines = text.split('\n');
+    const result: string[] = [];
+    type ListState = { indent: number; type: 'ul' | 'ol' };
+    const listStack: ListState[] = [];
+
+    for (const line of lines) {
+      const ulMatch = line.match(/^(\s*)[-*] (.*)$/);
+      const olMatch = line.match(/^(\s*)\d+\. (.*)$/);
+      const match = ulMatch || olMatch;
+
+      if (match) {
+        const indent = match[1].length;
+        const content = match[2];
+        const type: 'ul' | 'ol' = ulMatch ? 'ul' : 'ol';
+
+        // Close deeper levels
+        while (listStack.length > 0 && listStack[listStack.length - 1].indent > indent) {
+          const closed = listStack.pop()!;
+          result.push(`</${closed.type}>`);
+        }
+
+        // Open new level if indent increased or stack is empty
+        if (listStack.length === 0 || listStack[listStack.length - 1].indent < indent) {
+          listStack.push({ indent, type });
+          result.push(`<${type}>`);
+        }
+
+        result.push(`<li>${content}</li>`);
+      } else {
+        // Close all open lists before non-list line
+        while (listStack.length > 0) {
+          const closed = listStack.pop()!;
+          result.push(`</${closed.type}>`);
+        }
+        result.push(line);
+      }
+    }
+
+    // Close any remaining open lists
+    while (listStack.length > 0) {
+      const closed = listStack.pop()!;
+      result.push(`</${closed.type}>`);
+    }
+
+    return result.join('\n');
+  }
+
   private markdownToHtml(markdown: string): string {
     // First, evaluate JavaScript expressions
     const withEvaluatedJS = this.evaluateJavaScriptExpressions(markdown);
 
-    const html = withEvaluatedJS
+    // Process nested lists before inline replacements
+    const withLists = this.processLists(withEvaluatedJS);
+
+    const html = withLists
       .replace(/^# (.*$)/gm, '<h1>$1</h1>')
       .replace(/^## (.*$)/gm, '<h2>$1</h2>')
       .replace(/^### (.*$)/gm, '<h3>$1</h3>')
@@ -330,8 +381,6 @@ export class HtmlConverter {
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
       .replace(/`(.*?)`/g, '<code>$1</code>')
-      .replace(/^\- (.*$)/gm, '<li>$1</li>')
-      .replace(/^(\d+)\. (.*$)/gm, '<li>$2</li>')
       .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
         // Handle ![image ...] syntax (legacy and new)
         if (alt.toLowerCase().startsWith('image')) {
@@ -430,8 +479,7 @@ export class HtmlConverter {
       .replace(/\|.*\|/g, (match) => {
         const cells = match.split('|').map(cell => cell.trim()).filter(Boolean);
         return '<tr>' + cells.map(cell => `<td>${cell}</td>`).join('') + '</tr>';
-      })
-      .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+      });
 
     // Apply paragraph wrapping similar to main converter
     const lines = html.split('\n');
